@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 /* ── 긍정 / 부정 키워드 사전 ── */
@@ -125,16 +126,6 @@ function detectSentiment(text: string): Sentiment {
 
 function randomOf<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
-}
-
-/** HP·레벨에 따라 식물 이모지 결정 */
-function getPlantEmoji(hp: number, level: number): string {
-  if (hp === 0) return "🪦";
-  if (hp <= 25) return "🥀";
-  if (hp <= 50) return "🌱";
-  if (hp <= 75) return "🌿";
-  if (level >= 3) return "🌳";
-  return "🌸";
 }
 
 function getPlantStatus(hp: number, level: number): string {
@@ -278,8 +269,13 @@ export default function Home() {
     inputRef.current?.focus();
   }
 
-  const plant = getPlantEmoji(hp, level);
   const hpPercent = Math.round((hp / MAX_HP) * 100);
+  const potToneClass =
+    hp === 0
+      ? "grayscale opacity-45 saturate-50"
+      : hp <= 25
+        ? "grayscale-[40%] opacity-75 saturate-75"
+        : "opacity-100";
   const barColor =
     hp === 0
       ? "#b5aea3"
@@ -313,19 +309,10 @@ export default function Home() {
           50% { transform: rotate(8deg) scale(0.92); opacity: 0.7; }
           100% { transform: rotate(12deg) scale(0.88); opacity: 0.55; }
         }
-        @keyframes heal-sparkle {
-          0%, 100% { opacity: 0.35; transform: scale(0.85) rotate(0deg); }
-          50% { opacity: 1; transform: scale(1.2) rotate(12deg); }
-        }
-        @keyframes heal-pulse-ring {
-          0% { transform: scale(0.95); opacity: 0.5; }
-          100% { transform: scale(1.15); opacity: 0; }
-        }
         .plant-float { animation: heal-float 3.4s ease-in-out infinite; }
         .plant-shake { animation: heal-shake 0.55s ease-in-out; }
         .plant-bloom { animation: heal-bloom 0.75s ease-out; }
         .plant-wilt { animation: heal-wilt 0.6s ease-in forwards; }
-        .deco-sparkle { animation: heal-sparkle 2.6s ease-in-out infinite; }
         .hp-glow-up { box-shadow: 0 0 18px 4px rgba(156, 175, 136, 0.45); }
         .hp-glow-down { box-shadow: 0 0 18px 4px rgba(232, 165, 152, 0.5); }
       `}</style>
@@ -390,33 +377,11 @@ export default function Home() {
             </div>
           </header>
 
-          {/* ── 중앙: 둥실둥실 화분 ── */}
+          {/* ── 중앙: 화분 이미지 ── */}
           <main className="flex flex-1 flex-col items-center justify-center py-5 sm:py-8">
             <div className="relative flex flex-col items-center">
-              <span
-                className="deco-sparkle absolute -left-6 top-0 text-lg sm:-left-10 sm:text-xl"
-                aria-hidden
-              >
-                ✨
-              </span>
-              <span
-                className="deco-sparkle absolute -right-4 top-12 text-base sm:-right-8 sm:text-lg"
-                style={{ animationDelay: "1.1s" }}
-                aria-hidden
-              >
-                🍃
-              </span>
-              <span
-                className="deco-sparkle absolute left-1/2 -top-4 -translate-x-1/2 text-sm"
-                style={{ animationDelay: "0.5s" }}
-                aria-hidden
-              >
-                💫
-              </span>
-
-              {/* 식물 이모지 */}
               <div
-                className={`select-none text-[5.5rem] leading-none sm:text-[7.5rem] ${
+                className={`${
                   plantFx === "shake"
                     ? "plant-shake"
                     : plantFx === "bloom"
@@ -425,18 +390,18 @@ export default function Home() {
                         ? "plant-wilt"
                         : "plant-float"
                 }`}
-                role="img"
-                aria-label={getPlantStatus(hp, level)}
               >
-                {plant}
+                <Image
+                  src="/pot.png"
+                  alt={getPlantStatus(hp, level)}
+                  width={280}
+                  height={280}
+                  priority
+                  className={`h-auto w-52 drop-shadow-lg transition-all duration-700 sm:w-64 ${potToneClass}`}
+                />
               </div>
 
-              {/* 화분 */}
-              <div className="plant-float -mt-2 select-none text-[3.5rem] opacity-90 sm:text-5xl">
-                🪴
-              </div>
-
-              <p className="mt-4 max-w-[260px] rounded-full border border-[#e8dcc8] bg-white/70 px-5 py-2 text-center text-sm font-medium text-[#6d8a5e] shadow-sm sm:max-w-xs">
+              <p className="mt-6 max-w-[260px] rounded-full border border-[#e8dcc8] bg-white/70 px-5 py-2 text-center text-sm font-medium text-[#6d8a5e] shadow-sm sm:max-w-xs">
                 {getPlantStatus(hp, level)}
               </p>
             </div>
@@ -446,8 +411,7 @@ export default function Home() {
           <footer className="shrink-0 overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md">
             <div className="border-b border-[#ede8df] bg-gradient-to-r from-[#f5f0e8]/80 to-white/60 px-4 py-3">
               <p className="text-sm font-semibold text-[#4a5248]">
-                마음 쓰레기통{" "}
-                <span className="text-[#e8a598]">💬</span>
+                마음 쓰레기통
               </p>
               <p className="mt-0.5 text-xs text-[#8ba4b4]">
                 긍정의 말 → 성장 · 부정의 말 → 받아줄게요
