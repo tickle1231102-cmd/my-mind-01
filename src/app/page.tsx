@@ -129,17 +129,17 @@ function randomOf<T>(arr: T[]): T {
 }
 
 function getPlantStatus(hp: number, level: number): string {
-  if (hp === 0) return "식물이 시들었어요… 긍정의 말로 다시 심어 주세요";
+  if (hp === 0) return "씨앗이 잠들었어요… 긍정의 말로 다시 깨워 주세요";
   if (hp <= 25) return "마음이 무거워요… 따뜻한 말이 필요해요";
-  if (hp <= 50) return "작은 새싹이 고개를 들었어요";
-  if (hp <= 75) return "무럭무럭 자라는 중이에요";
-  if (level >= 3) return "우당탕 마음 나무가 자랐어요!";
-  return "활짝 꽃이 피었어요!";
+  if (hp <= 50) return "작은 씨앗이 화분 속에서 잠들어 있어요";
+  if (hp <= 75) return "씨앗이 무럭무럭 자라는 중이에요";
+  if (level >= 3) return "마음의 씨앗이 단단한 나무가 되었어요!";
+  return "씨앗이 활짝 피어났어요!";
 }
 
 const BOT = {
   welcome:
-    "안녕하세요 🌱 긍정의 말을 해주면 식물이 자라요. 힘든 감정도 편하게 내려놓으세요.",
+    "안녕하세요. 화분 속 씨앗에게 긍정의 말을 해주면 자라요. 힘든 감정도 편하게 내려놓으세요.",
   positive: [
     "그 말이 햇빛이 되었어요! 식물이 기뻐하고 있어요 ☀️",
     "정말 좋은 에너지예요. 조금씩 자라고 있어요!",
@@ -377,11 +377,15 @@ export default function Home() {
             </div>
           </header>
 
-          {/* ── 중앙: 화분 이미지 ── */}
-          <main className="flex flex-1 flex-col items-center justify-center py-5 sm:py-8">
-            <div className="relative flex flex-col items-center">
+          {/* ── 중앙: 씨앗 화분 시작 화면 ── */}
+          <main className="flex flex-1 flex-col items-center justify-center py-4 sm:py-6">
+            <div className="flex w-full max-w-sm flex-col items-center">
+              <p className="mb-3 text-center text-[11px] font-semibold tracking-[0.28em] text-[#8ba4b4]">
+                YOUR SEED POT
+              </p>
+
               <div
-                className={`${
+                className={`w-full overflow-hidden rounded-[1.75rem] bg-[#1a1a1a] shadow-[0_20px_50px_rgba(26,26,26,0.22)] ${
                   plantFx === "shake"
                     ? "plant-shake"
                     : plantFx === "bloom"
@@ -393,16 +397,19 @@ export default function Home() {
               >
                 <Image
                   src="/pot.png"
-                  alt={getPlantStatus(hp, level)}
-                  width={280}
-                  height={280}
+                  alt="마음의 화분 — 씨앗이 심어진 시작 화분"
+                  width={941}
+                  height={820}
                   priority
-                  className={`h-auto w-52 drop-shadow-lg transition-all duration-700 sm:w-64 ${potToneClass}`}
+                  className={`h-auto w-full transition-all duration-700 ${potToneClass}`}
                 />
               </div>
 
-              <p className="mt-6 max-w-[260px] rounded-full border border-[#e8dcc8] bg-white/70 px-5 py-2 text-center text-sm font-medium text-[#6d8a5e] shadow-sm sm:max-w-xs">
+              <p className="mt-5 max-w-xs rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-2.5 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
                 {getPlantStatus(hp, level)}
+              </p>
+              <p className="mt-2 text-center text-xs text-[#8ba4b4]">
+                긍정의 말 한마디가 씨앗을 깨워요
               </p>
             </div>
           </main>
