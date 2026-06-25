@@ -185,10 +185,29 @@ export default function Home() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popSoundRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const audio = new Audio("/pop11.mp3");
+    audio.preload = "auto";
+    popSoundRef.current = audio;
+
+    return () => {
+      audio.pause();
+      popSoundRef.current = null;
+    };
+  }, []);
+
+  function playPopSound() {
+    const audio = popSoundRef.current;
+    if (!audio) return;
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  }
 
   function playFx(kind: PlantFx) {
     setPlantFx(kind);
@@ -384,8 +403,11 @@ export default function Home() {
                 YOUR SEED POT
               </p>
 
-              <div
-                className={`flex w-full justify-center ${
+              <button
+                type="button"
+                onClick={playPopSound}
+                aria-label="화분을 눌러 소리 내기"
+                className={`flex w-full cursor-pointer justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
                   plantFx === "shake"
                     ? "plant-shake"
                     : plantFx === "bloom"
@@ -401,9 +423,10 @@ export default function Home() {
                   width={508}
                   height={478}
                   priority
-                  className={`h-auto w-28 drop-shadow-[0_12px_20px_rgba(74,82,72,0.16)] transition-all duration-700 sm:w-32 ${potToneClass}`}
+                  draggable={false}
+                  className={`pointer-events-none h-auto w-28 select-none drop-shadow-[0_12px_20px_rgba(74,82,72,0.16)] transition-all duration-700 sm:w-32 ${potToneClass}`}
                 />
-              </div>
+              </button>
 
               <p className="mt-5 max-w-xs rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-2.5 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
                 {getPlantStatus(hp, level)}
