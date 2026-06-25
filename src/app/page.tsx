@@ -377,11 +377,11 @@ export default function Home() {
         .hp-glow-up { box-shadow: 0 0 18px 4px rgba(156, 175, 136, 0.45); }
         .hp-glow-down { box-shadow: 0 0 18px 4px rgba(232, 165, 152, 0.5); }
         @keyframes water-can-pour {
-          0% { opacity: 0; transform: translate(36px, -52px) rotate(-12deg) scale(0.65); }
-          18% { opacity: 1; transform: translate(18px, -28px) rotate(-32deg) scale(0.88); }
-          45% { opacity: 1; transform: translate(6px, -14px) rotate(-50deg) scale(1); }
-          75% { opacity: 1; transform: translate(6px, -14px) rotate(-50deg) scale(1); }
-          100% { opacity: 0; transform: translate(-4px, -6px) rotate(-36deg) scale(0.9); }
+          0% { opacity: 0; transform: translate(18px, -28px) rotate(-12deg) scale(0.65); }
+          18% { opacity: 1; transform: translate(10px, -16px) rotate(-32deg) scale(0.88); }
+          45% { opacity: 1; transform: translate(2px, -8px) rotate(-50deg) scale(1); }
+          75% { opacity: 1; transform: translate(2px, -8px) rotate(-50deg) scale(1); }
+          100% { opacity: 0; transform: translate(-2px, -2px) rotate(-36deg) scale(0.9); }
         }
         @keyframes water-stream {
           0% { opacity: 0; height: 0; }
@@ -461,32 +461,38 @@ export default function Home() {
             </div>
           </header>
 
-          {/* ── 중앙: 씨앗 화분 시작 화면 ── */}
-          <main className="flex flex-1 flex-col items-center justify-center py-4 sm:py-6">
-            <div className="flex w-full max-w-sm flex-col items-center">
-              <p className="mb-3 text-center text-[11px] font-semibold tracking-[0.28em] text-[#8ba4b4]">
+          {/* ── 성장 공간 + 화분 (하단 고정) ── */}
+          <main className="flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-end">
+              <p className="mb-auto pt-2 text-center text-[11px] font-semibold tracking-[0.28em] text-[#8ba4b4]">
                 YOUR SEED POT
               </p>
 
-              <div className="relative flex w-full justify-center">
+              {/* 꽃이 자랄 상단 공간 */}
+              <div
+                className="mb-1 w-full flex-1"
+                aria-hidden
+              />
+
+              <div className="relative flex w-full shrink-0 justify-center pb-1">
                 {watering && (
                   <div
-                    className="pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2"
+                    className="pointer-events-none absolute -top-6 left-1/2 z-10 -translate-x-1/2 sm:-top-7"
                     aria-hidden
                   >
                     <div className="water-can-pour relative">
                       <Image
                         src="/watering-can.png"
                         alt=""
-                        width={120}
-                        height={120}
-                        className="h-16 w-16 drop-shadow-md sm:h-20 sm:w-20"
+                        width={256}
+                        height={256}
+                        className="h-10 w-10 drop-shadow-md sm:h-12 sm:w-12"
                       />
-                      <div className="absolute left-2 top-[3.4rem] flex flex-col items-center sm:left-3 sm:top-[4.2rem]">
-                        <div className="water-stream w-1 rounded-full bg-[#8ec5e8]/80" />
-                        <span className="water-drop mt-0.5 block h-1.5 w-1.5 rounded-full bg-[#8ec5e8]" />
-                        <span className="water-drop water-drop-delay mt-1 block h-1 w-1 rounded-full bg-[#a3d4f0]" />
-                        <span className="water-drop water-drop-delay-2 mt-1 block h-1 w-1 rounded-full bg-[#b8dff7]" />
+                      <div className="absolute left-1.5 top-[2.1rem] flex flex-col items-center sm:left-2 sm:top-[2.55rem]">
+                        <div className="water-stream w-0.5 rounded-full bg-[#8ec5e8]/80" />
+                        <span className="water-drop mt-0.5 block h-1 w-1 rounded-full bg-[#8ec5e8]" />
+                        <span className="water-drop water-drop-delay mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#a3d4f0]" />
+                        <span className="water-drop water-drop-delay-2 mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#b8dff7]" />
                       </div>
                     </div>
                   </div>
@@ -513,18 +519,18 @@ export default function Home() {
                     height={478}
                     priority
                     draggable={false}
-                    className={`pointer-events-none h-auto w-28 select-none drop-shadow-[0_12px_20px_rgba(74,82,72,0.16)] transition-all duration-700 sm:w-32 ${potToneClass}`}
+                    className={`pointer-events-none h-auto w-[calc(7rem/3)] select-none drop-shadow-[0_8px_14px_rgba(74,82,72,0.14)] transition-all duration-700 sm:w-[calc(8rem/3)] ${potToneClass}`}
                   />
                 </button>
               </div>
-
-              <p className="mt-5 max-w-xs rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-2.5 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
-                {getPlantStatus(hp, level)}
-              </p>
-              <p className="mt-2 text-center text-xs text-[#8ba4b4]">
-                긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요
-              </p>
             </div>
+
+            <p className="mt-3 max-w-xs self-center rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-2 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
+              {getPlantStatus(hp, level)}
+            </p>
+            <p className="mt-2 pb-1 text-center text-xs text-[#8ba4b4]">
+              긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요
+            </p>
           </main>
 
           {/* ── 하단: 채팅창 ── */}
