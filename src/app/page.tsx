@@ -385,7 +385,7 @@ export default function Home() {
               </p>
 
               <div
-                className={`w-full overflow-hidden rounded-[1.75rem] bg-[#1a1a1a] shadow-[0_20px_50px_rgba(26,26,26,0.22)] ${
+                className={`flex w-full justify-center ${
                   plantFx === "shake"
                     ? "plant-shake"
                     : plantFx === "bloom"
@@ -398,10 +398,10 @@ export default function Home() {
                 <Image
                   src="/pot.png"
                   alt="마음의 화분 — 씨앗이 심어진 시작 화분"
-                  width={941}
-                  height={820}
+                  width={508}
+                  height={478}
                   priority
-                  className={`h-auto w-full transition-all duration-700 ${potToneClass}`}
+                  className={`h-auto w-56 drop-shadow-[0_18px_28px_rgba(74,82,72,0.18)] transition-all duration-700 sm:w-64 ${potToneClass}`}
                 />
               </div>
 
