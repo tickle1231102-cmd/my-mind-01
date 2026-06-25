@@ -102,6 +102,7 @@ const NEGATIVE_WORDS = [
 const MAX_HP = 100;
 const HP_GAIN = 15;
 const HP_LOSS = 18;
+const HP_POT_GAIN = 5;
 const LEVEL_UP_THRESHOLD = MAX_HP;
 
 type Sentiment = "positive" | "negative" | "neutral";
@@ -182,10 +183,12 @@ export default function Home() {
   const [nextId, setNextId] = useState(1);
   const [plantFx, setPlantFx] = useState<PlantFx>("float");
   const [hpGlow, setHpGlow] = useState<"none" | "up" | "down">("none");
+  const [watering, setWatering] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const popSoundRef = useRef<HTMLAudioElement | null>(null);
+  const wateringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -199,14 +202,51 @@ export default function Home() {
     return () => {
       audio.pause();
       popSoundRef.current = null;
+      if (wateringTimerRef.current) clearTimeout(wateringTimerRef.current);
     };
   }, []);
+
+  function triggerWatering() {
+    if (wateringTimerRef.current) clearTimeout(wateringTimerRef.current);
+    setWatering(true);
+    wateringTimerRef.current = setTimeout(() => {
+      setWatering(false);
+      wateringTimerRef.current = null;
+    }, 1300);
+  }
+
+  function applyHpGain(gain: number, plantFxKind?: PlantFx) {
+    let newHp = Math.min(MAX_HP, hp + gain);
+    let newLevel = level;
+    const hpIncreased = newHp > hp;
+
+    if (hpIncreased) {
+      triggerWatering();
+      flashHpGlow("up");
+      playFx(plantFxKind ?? (newHp >= MAX_HP ? "bloom" : "float"));
+    }
+
+    if (newHp >= LEVEL_UP_THRESHOLD) {
+      newLevel = level + 1;
+      newHp = 40;
+    }
+
+    setHp(newHp);
+    setLevel(newLevel);
+
+    return { leveledUp: newLevel > level, hpIncreased };
+  }
 
   function playPopSound() {
     const audio = popSoundRef.current;
     if (!audio) return;
     audio.currentTime = 0;
     void audio.play().catch(() => {});
+  }
+
+  function handlePotClick() {
+    playPopSound();
+    applyHpGain(HP_POT_GAIN);
   }
 
   function playFx(kind: PlantFx) {
@@ -235,9 +275,7 @@ export default function Home() {
 
     if (tone === "positive") {
       const gain = wasDead ? HP_GAIN + 10 : HP_GAIN;
-      newHp = Math.min(MAX_HP, hp + gain);
-      flashHpGlow("up");
-      playFx(wasDead ? "bloom" : newHp >= MAX_HP ? "bloom" : "float");
+      const { leveledUp } = applyHpGain(gain, wasDead ? "bloom" : undefined);
 
       batch.push({
         id: id++,
@@ -246,9 +284,7 @@ export default function Home() {
         tone: "positive",
       });
 
-      if (newHp >= LEVEL_UP_THRESHOLD) {
-        newLevel = level + 1;
-        newHp = 40;
+      if (leveledUp) {
         batch.push({
           id: id++,
           from: "bot",
@@ -256,6 +292,12 @@ export default function Home() {
           tone: "positive",
         });
       }
+
+      setMessages((prev) => [...prev, ...batch]);
+      setNextId(id);
+      setInput("");
+      inputRef.current?.focus();
+      return;
     } else if (tone === "negative") {
       newHp = Math.max(0, hp - HP_LOSS);
       flashHpGlow("down");
@@ -334,6 +376,29 @@ export default function Home() {
         .plant-wilt { animation: heal-wilt 0.6s ease-in forwards; }
         .hp-glow-up { box-shadow: 0 0 18px 4px rgba(156, 175, 136, 0.45); }
         .hp-glow-down { box-shadow: 0 0 18px 4px rgba(232, 165, 152, 0.5); }
+        @keyframes water-can-pour {
+          0% { opacity: 0; transform: translate(36px, -52px) rotate(-12deg) scale(0.65); }
+          18% { opacity: 1; transform: translate(18px, -28px) rotate(-32deg) scale(0.88); }
+          45% { opacity: 1; transform: translate(6px, -14px) rotate(-50deg) scale(1); }
+          75% { opacity: 1; transform: translate(6px, -14px) rotate(-50deg) scale(1); }
+          100% { opacity: 0; transform: translate(-4px, -6px) rotate(-36deg) scale(0.9); }
+        }
+        @keyframes water-stream {
+          0% { opacity: 0; height: 0; }
+          25% { opacity: 0.85; height: 18px; }
+          70% { opacity: 0.55; height: 34px; }
+          100% { opacity: 0; height: 42px; }
+        }
+        @keyframes water-drop {
+          0% { opacity: 0; transform: translateY(0) scale(0.7); }
+          20% { opacity: 0.9; }
+          100% { opacity: 0; transform: translateY(22px) scale(1); }
+        }
+        .water-can-pour { animation: water-can-pour 1.2s ease-in-out forwards; }
+        .water-stream { animation: water-stream 1s ease-in forwards; }
+        .water-drop { animation: water-drop 0.9s ease-in forwards; }
+        .water-drop-delay { animation-delay: 0.15s; }
+        .water-drop-delay-2 { animation-delay: 0.28s; }
       `}</style>
 
       <div className="relative flex min-h-dvh flex-col bg-[#FDFBF7]">
@@ -391,7 +456,7 @@ export default function Home() {
                 />
               </div>
               <p className="mt-2 text-center text-[11px] text-[#8ba4b4]">
-                긍정어 +{HP_GAIN} · 부정어 −{HP_LOSS}
+                긍정어 +{HP_GAIN} · 화분 터치 +{HP_POT_GAIN} · 부정어 −{HP_LOSS}
               </p>
             </div>
           </header>
@@ -403,36 +468,61 @@ export default function Home() {
                 YOUR SEED POT
               </p>
 
-              <button
-                type="button"
-                onClick={playPopSound}
-                aria-label="화분을 눌러 소리 내기"
-                className={`flex w-full cursor-pointer justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
-                  plantFx === "shake"
-                    ? "plant-shake"
-                    : plantFx === "bloom"
-                      ? "plant-bloom"
-                      : plantFx === "wilt"
-                        ? "plant-wilt"
-                        : "plant-float"
-                }`}
-              >
-                <Image
-                  src="/pot.png"
-                  alt="마음의 화분 — 씨앗이 심어진 시작 화분"
-                  width={508}
-                  height={478}
-                  priority
-                  draggable={false}
-                  className={`pointer-events-none h-auto w-28 select-none drop-shadow-[0_12px_20px_rgba(74,82,72,0.16)] transition-all duration-700 sm:w-32 ${potToneClass}`}
-                />
-              </button>
+              <div className="relative flex w-full justify-center">
+                {watering && (
+                  <div
+                    className="pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2"
+                    aria-hidden
+                  >
+                    <div className="water-can-pour relative">
+                      <Image
+                        src="/watering-can.png"
+                        alt=""
+                        width={120}
+                        height={120}
+                        className="h-16 w-16 drop-shadow-md sm:h-20 sm:w-20"
+                      />
+                      <div className="absolute left-2 top-[3.4rem] flex flex-col items-center sm:left-3 sm:top-[4.2rem]">
+                        <div className="water-stream w-1 rounded-full bg-[#8ec5e8]/80" />
+                        <span className="water-drop mt-0.5 block h-1.5 w-1.5 rounded-full bg-[#8ec5e8]" />
+                        <span className="water-drop water-drop-delay mt-1 block h-1 w-1 rounded-full bg-[#a3d4f0]" />
+                        <span className="water-drop water-drop-delay-2 mt-1 block h-1 w-1 rounded-full bg-[#b8dff7]" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handlePotClick}
+                  aria-label="화분을 눌러 물 주기"
+                  className={`relative z-0 flex cursor-pointer justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
+                    plantFx === "shake"
+                      ? "plant-shake"
+                      : plantFx === "bloom"
+                        ? "plant-bloom"
+                        : plantFx === "wilt"
+                          ? "plant-wilt"
+                          : "plant-float"
+                  }`}
+                >
+                  <Image
+                    src="/pot.png"
+                    alt="마음의 화분 — 씨앗이 심어진 시작 화분"
+                    width={508}
+                    height={478}
+                    priority
+                    draggable={false}
+                    className={`pointer-events-none h-auto w-28 select-none drop-shadow-[0_12px_20px_rgba(74,82,72,0.16)] transition-all duration-700 sm:w-32 ${potToneClass}`}
+                  />
+                </button>
+              </div>
 
               <p className="mt-5 max-w-xs rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-2.5 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
                 {getPlantStatus(hp, level)}
               </p>
               <p className="mt-2 text-center text-xs text-[#8ba4b4]">
-                긍정의 말 한마디가 씨앗을 깨워요
+                긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요
               </p>
             </div>
           </main>
