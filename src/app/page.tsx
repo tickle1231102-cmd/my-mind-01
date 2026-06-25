@@ -401,7 +401,7 @@ export default function Home() {
                   width={508}
                   height={478}
                   priority
-                  className={`h-auto w-56 drop-shadow-[0_18px_28px_rgba(74,82,72,0.18)] transition-all duration-700 sm:w-64 ${potToneClass}`}
+                  className={`h-auto w-28 drop-shadow-[0_12px_20px_rgba(74,82,72,0.16)] transition-all duration-700 sm:w-32 ${potToneClass}`}
                 />
               </div>
 
