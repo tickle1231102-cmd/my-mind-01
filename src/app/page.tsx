@@ -695,7 +695,7 @@ export default function Home() {
                         height={SEED_SIZE}
                         priority
                         draggable={false}
-                        className={`pointer-events-none h-auto w-28 select-none object-contain drop-shadow-[0_10px_18px_rgba(62,52,42,0.18)] transition-all duration-700 sm:w-32 ${potToneClass}`}
+                        className={`pointer-events-none h-auto w-14 select-none object-contain drop-shadow-[0_10px_18px_rgba(62,52,42,0.18)] transition-all duration-700 sm:w-16 ${potToneClass}`}
                       />
                     ) : (
                       sproutSrc && (
