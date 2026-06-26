@@ -129,13 +129,24 @@ function randomOf<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function getSproutSrc(level: number): string {
+  const stage = Math.min(Math.max(level, 1), 5);
+  return `/sprouts/sprout0${stage}.png`;
+}
+
 function getPlantStatus(hp: number, level: number): string {
   if (hp === 0) return "씨앗이 잠들었어요… 긍정의 말로 다시 깨워 주세요";
   if (hp <= 25) return "마음이 무거워요… 따뜻한 말이 필요해요";
-  if (hp <= 50) return "작은 씨앗이 화분 속에서 잠들어 있어요";
-  if (hp <= 75) return "씨앗이 무럭무럭 자라는 중이에요";
-  if (level >= 3) return "마음의 씨앗이 단단한 나무가 되었어요!";
-  return "씨앗이 활짝 피어났어요!";
+
+  const stage = Math.min(Math.max(level, 1), 5);
+  const byLevel: Record<number, string> = {
+    1: "작은 씨앗이 막 싹을 틔웠어요",
+    2: "잎이 하나둘 나오기 시작했어요",
+    3: "줄기가 튼튼하게 자라고 있어요",
+    4: "꽃봉오리가 맺히기 시작했어요",
+    5: "꽃과 열매까지 열린 마음의 화분이에요!",
+  };
+  return byLevel[stage];
 }
 
 const BOT = {
@@ -172,6 +183,9 @@ const BOT = {
 };
 
 const QUICK_HINTS = ["오늘도 잘했어", "힘들어", "감사해", "행복해"];
+
+const SPROUT_WIDTH = 176;
+const SPROUT_HEIGHT = 331;
 
 export default function Home() {
   const [level, setLevel] = useState(1);
@@ -331,6 +345,7 @@ export default function Home() {
   }
 
   const hpPercent = Math.round((hp / MAX_HP) * 100);
+  const sproutSrc = getSproutSrc(level);
   const potToneClass =
     hp === 0
       ? "grayscale opacity-45 saturate-50"
@@ -474,10 +489,10 @@ export default function Home() {
                 aria-hidden
               />
 
-              <div className="relative flex w-full shrink-0 justify-center pb-1">
+              <div className="relative flex w-full shrink-0 justify-center pb-0">
                 {watering && (
                   <div
-                    className="pointer-events-none absolute -top-6 left-1/2 z-10 -translate-x-1/2 sm:-top-7"
+                    className="pointer-events-none absolute bottom-[58%] left-1/2 z-10 -translate-x-1/2 sm:bottom-[60%]"
                     aria-hidden
                   >
                     <div className="water-can-pour relative">
@@ -501,8 +516,8 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handlePotClick}
-                  aria-label="화분을 눌러 물 주기"
-                  className={`relative z-0 flex cursor-pointer justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
+                  aria-label={`레벨 ${level} 화분을 눌러 물 주기`}
+                  className={`relative z-0 flex cursor-pointer items-end justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
                     plantFx === "shake"
                       ? "plant-shake"
                       : plantFx === "bloom"
@@ -513,13 +528,14 @@ export default function Home() {
                   }`}
                 >
                   <Image
-                    src="/pot.png"
-                    alt="마음의 화분 — 씨앗이 심어진 시작 화분"
-                    width={508}
-                    height={478}
+                    key={level}
+                    src={sproutSrc}
+                    alt={`레벨 ${level} 마음의 화분`}
+                    width={SPROUT_WIDTH}
+                    height={SPROUT_HEIGHT}
                     priority
                     draggable={false}
-                    className={`pointer-events-none h-auto w-[calc(7rem/3)] select-none drop-shadow-[0_8px_14px_rgba(74,82,72,0.14)] transition-all duration-700 sm:w-[calc(8rem/3)] ${potToneClass}`}
+                    className={`pointer-events-none h-auto w-[4.75rem] select-none object-contain object-bottom drop-shadow-[0_8px_14px_rgba(74,82,72,0.14)] transition-all duration-700 sm:w-[5.5rem] ${potToneClass}`}
                   />
                 </button>
               </div>
