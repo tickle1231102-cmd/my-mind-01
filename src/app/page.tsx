@@ -214,7 +214,7 @@ const QUICK_HINTS = ["오늘도 잘했어", "힘들어", "감사해", "행복해
 const SPROUT_WIDTH = 176;
 const SPROUT_HEIGHT = 331;
 
-type BackgroundId = "room" | "beige" | "garden" | "grassland";
+type BackgroundId = "room" | "beige" | "grassland";
 
 const BACKGROUNDS: {
   id: BackgroundId;
@@ -233,11 +233,6 @@ const BACKGROUNDS: {
     id: "beige",
     label: "몽글 베이지",
     sceneClass: "bg-gradient-to-b from-[#f7f2ea] via-[#efe8dc] to-[#e4d8c8]",
-  },
-  {
-    id: "garden",
-    label: "초록 정원",
-    sceneClass: "bg-gradient-to-b from-[#dfe8d4] via-[#cdd9c0] to-[#b5c7a3]",
   },
   {
     id: "grassland",
@@ -568,7 +563,7 @@ export default function Home() {
           )}
 
           {/* ── 상단: 레벨 & HP ── */}
-          <header className="shrink-0 space-y-3">
+          <header className="shrink-0 space-y-2.5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-3 pl-1 sm:gap-4 sm:pl-0">
                 <div className="w-10 shrink-0" aria-hidden />
@@ -590,7 +585,7 @@ export default function Home() {
             </div>
 
             <div
-              className={`rounded-2xl border border-[#e8e0d4] bg-white/80 p-4 shadow-sm backdrop-blur-sm transition-shadow duration-500 ${
+              className={`rounded-2xl border border-[#e8e0d4] bg-white/80 px-4 py-3 shadow-sm backdrop-blur-sm transition-shadow duration-500 ${
                 hpGlow === "up"
                   ? "hp-glow-up"
                   : hpGlow === "down"
@@ -611,14 +606,11 @@ export default function Home() {
                   style={{ width: `${hpPercent}%`, backgroundColor: barColor }}
                 />
               </div>
-              <p className="mt-2 text-center text-[11px] text-[#8ba4b4]">
-                긍정어 +{HP_GAIN} · 화분 터치 +{HP_POT_GAIN} · 부정어 −{HP_LOSS}
-              </p>
             </div>
           </header>
 
           {/* ── 성장 공간 + 화분 (배경 위) ── */}
-          <main className="mt-3 flex min-h-0 flex-1 flex-col sm:mt-4">
+          <main className="mt-2 flex min-h-0 flex-1 flex-col sm:mt-3">
             <div
               className={`relative min-h-[11.5rem] w-full flex-1 overflow-hidden rounded-2xl border border-[#e8dcc8]/80 shadow-md sm:min-h-[13.5rem] ${selectedBackground.sceneClass ?? ""}`}
             >
