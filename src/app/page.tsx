@@ -549,7 +549,7 @@ export default function Home() {
           {/* ── 상단: 레벨 & HP ── */}
           <header className="shrink-0 space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 flex-1 items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-3 pl-1 sm:gap-4 sm:pl-0">
                 <div className="w-10 shrink-0" aria-hidden />
                 <div>
                   <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
@@ -597,11 +597,7 @@ export default function Home() {
           </header>
 
           {/* ── 성장 공간 + 화분 (배경 위) ── */}
-          <main className="flex min-h-0 flex-1 flex-col">
-            <p className="mb-2 text-center text-[11px] font-semibold tracking-[0.28em] text-[#8ba4b4]">
-              YOUR SEED POT
-            </p>
-
+          <main className="mt-3 flex min-h-0 flex-1 flex-col sm:mt-4">
             <div
               className={`relative min-h-[11.5rem] w-full flex-1 overflow-hidden rounded-2xl border border-[#e8dcc8]/80 shadow-md sm:min-h-[13.5rem] ${selectedBackground.sceneClass ?? ""}`}
             >
