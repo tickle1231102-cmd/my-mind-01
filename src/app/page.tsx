@@ -134,9 +134,14 @@ function getSproutSrc(level: number): string {
   return `/sprouts/sprout0${stage}.png`;
 }
 
-function getPlantStatus(hp: number, level: number): string {
-  if (hp === 0) return "씨앗이 잠들었어요… 긍정의 말로 다시 깨워 주세요";
-  if (hp <= 25) return "마음이 무거워요… 따뜻한 말이 필요해요";
+function getPlantStatus(
+  hp: number,
+  level: number,
+  wiltedByNegative: boolean,
+): string {
+  if (hp === 0 && wiltedByNegative) {
+    return "씨앗이 잠들었어요… 긍정의 말로 다시 깨워 주세요";
+  }
 
   const stage = Math.min(Math.max(level, 1), 5);
   const byLevel: Record<number, string> = {
@@ -146,6 +151,14 @@ function getPlantStatus(hp: number, level: number): string {
     4: "꽃봉오리가 맺히기 시작했어요",
     5: "꽃과 열매까지 열린 마음의 화분이에요!",
   };
+
+  if (hp === 0) {
+    return `레벨 ${stage} 달성! 긍정의 말로 다시 키워 보세요`;
+  }
+  if (wiltedByNegative && hp <= 25) {
+    return "마음이 무거워요… 따뜻한 말이 필요해요";
+  }
+
   return byLevel[stage];
 }
 
@@ -227,6 +240,7 @@ export default function Home() {
   const [watering, setWatering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
+  const [wiltedByNegative, setWiltedByNegative] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -262,22 +276,27 @@ export default function Home() {
     let newHp = Math.min(MAX_HP, hp + gain);
     let newLevel = level;
     const hpIncreased = newHp > hp;
-
-    if (hpIncreased) {
-      triggerWatering();
-      flashHpGlow("up");
-      playFx(plantFxKind ?? (newHp >= MAX_HP ? "bloom" : "float"));
-    }
+    let leveledUp = false;
 
     if (newHp >= LEVEL_UP_THRESHOLD) {
       newLevel = level + 1;
       newHp = 0;
+      leveledUp = true;
+      setWiltedByNegative(false);
+      triggerWatering();
+      flashHpGlow("up");
+      playFx("bloom");
+    } else if (hpIncreased) {
+      setWiltedByNegative(false);
+      triggerWatering();
+      flashHpGlow("up");
+      playFx(plantFxKind ?? "float");
     }
 
     setHp(newHp);
     setLevel(newLevel);
 
-    return { leveledUp: newLevel > level, hpIncreased };
+    return { leveledUp, hpIncreased };
   }
 
   function playPopSound() {
@@ -314,7 +333,7 @@ export default function Home() {
 
     let newHp = hp;
     let newLevel = level;
-    const wasDead = hp === 0;
+    const wasDead = hp === 0 && wiltedByNegative;
 
     if (tone === "positive") {
       const gain = wasDead ? HP_GAIN + 10 : HP_GAIN;
@@ -343,6 +362,7 @@ export default function Home() {
       return;
     } else if (tone === "negative") {
       newHp = Math.max(0, hp - HP_LOSS);
+      setWiltedByNegative(true);
       flashHpGlow("down");
       playFx(newHp === 0 ? "wilt" : "shake");
       batch.push({
@@ -378,19 +398,21 @@ export default function Home() {
   const selectedBackground =
     BACKGROUNDS.find((bg) => bg.id === backgroundId) ?? BACKGROUNDS[0];
   const potToneClass =
-    hp === 0
+    wiltedByNegative && hp === 0
       ? "grayscale opacity-45 saturate-50"
-      : hp <= 25
+      : wiltedByNegative && hp <= 25
         ? "grayscale-[40%] opacity-75 saturate-75"
         : "opacity-100";
   const barColor =
-    hp === 0
+    wiltedByNegative && hp === 0
       ? "#b5aea3"
-      : hp <= 25
-        ? "#e8a598"
-        : hp <= 50
-          ? "#c4b896"
-          : "#8fad7a";
+      : hp === 0
+        ? "#c4b896"
+        : wiltedByNegative && hp <= 25
+          ? "#e8a598"
+          : hp <= 50
+            ? "#c4b896"
+            : "#8fad7a";
 
   return (
     <>
@@ -646,7 +668,7 @@ export default function Home() {
             </div>
 
             <p className="mt-3 max-w-xs self-center rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-2 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
-              {getPlantStatus(hp, level)}
+              {getPlantStatus(hp, level, wiltedByNegative)}
             </p>
             <p className="mt-2 pb-1 text-center text-xs text-[#8ba4b4]">
               긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요
