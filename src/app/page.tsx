@@ -129,10 +129,13 @@ function randomOf<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function getSproutSrc(level: number): string {
-  const stage = Math.min(Math.max(level, 1), 5);
+function getSproutSrc(level: number): string | null {
+  if (level <= 0) return null;
+  const stage = Math.min(level, 5);
   return `/sprouts/sprout0${stage}.png`;
 }
+
+const SEED_SIZE = 1024;
 
 function getPlantStatus(
   hp: number,
@@ -141,6 +144,16 @@ function getPlantStatus(
 ): string {
   if (hp === 0 && wiltedByNegative) {
     return "씨앗이 잠들었어요… 긍정의 말로 다시 깨워 주세요";
+  }
+
+  if (level === 0) {
+    if (wiltedByNegative && hp <= 25) {
+      return "마음이 무거워요… 따뜻한 말이 필요해요";
+    }
+    if (hp === 0) {
+      return "반짝이는 씨앗이 당신을 기다리고 있어요";
+    }
+    return "씨앗이 살짝 깨어나고 있어요";
   }
 
   const stage = Math.min(Math.max(level, 1), 5);
@@ -153,7 +166,7 @@ function getPlantStatus(
   };
 
   if (hp === 0) {
-    return `레벨 ${stage} 달성! 긍정의 말로 다시 키워 보세요`;
+    return `레벨 ${level} 달성! 긍정의 말로 다시 키워 보세요`;
   }
   if (wiltedByNegative && hp <= 25) {
     return "마음이 무거워요… 따뜻한 말이 필요해요";
@@ -164,7 +177,7 @@ function getPlantStatus(
 
 const BOT = {
   welcome:
-    "안녕하세요. 화분 속 씨앗에게 긍정의 말을 해주면 자라요. 힘든 감정도 편하게 내려놓으세요.",
+    "안녕하세요. 작은 씨앗에게 긍정의 말을 해주면 화분에 싹이 돋아요. 힘든 감정도 편하게 내려놓으세요.",
   positive: [
     "그 말이 햇빛이 되었어요! 식물이 기뻐하고 있어요 ☀️",
     "정말 좋은 에너지예요. 조금씩 자라고 있어요!",
@@ -185,6 +198,7 @@ const BOT = {
     "천천히 적어 보세요. 식물이 듣고 있어요.",
   ],
   levelUp: [
+    "레벨 업! 씨앗이 화분에 싹을 틔웠어요!",
     "레벨 업! 🎉 마음 정원이 더 넓어졌어요!",
     "새 단계 달성! 식물이 한 단계 진화했어요 ✨",
     "축하해요! 당신의 마음 씨앗이 더 단단해졌어요 🌳",
@@ -228,8 +242,8 @@ const BACKGROUNDS: {
 ];
 
 export default function Home() {
-  const [level, setLevel] = useState(1);
-  const [hp, setHp] = useState(50);
+  const [level, setLevel] = useState(0);
+  const [hp, setHp] = useState(0);
   const [messages, setMessages] = useState<Message[]>([
     { id: 0, from: "bot", text: BOT.welcome },
   ]);
@@ -395,6 +409,7 @@ export default function Home() {
 
   const hpPercent = Math.round((hp / MAX_HP) * 100);
   const sproutSrc = getSproutSrc(level);
+  const isSeedStage = level === 0;
   const selectedBackground =
     BACKGROUNDS.find((bg) => bg.id === backgroundId) ?? BACKGROUNDS[0];
   const potToneClass =
@@ -612,11 +627,19 @@ export default function Home() {
                 />
               )}
 
-              <div className="absolute inset-x-0 bottom-[5%] z-[1] flex justify-center sm:bottom-[6%]">
+              <div
+                className={`absolute inset-x-0 z-[1] flex justify-center ${
+                  isSeedStage
+                    ? "inset-y-0 items-center"
+                    : "bottom-[5%] sm:bottom-[6%]"
+                }`}
+              >
                 <div className="relative flex justify-center">
                   {watering && (
                     <div
-                      className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 sm:-top-9"
+                      className={`pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 ${
+                        isSeedStage ? "-top-10 sm:-top-12" : "-top-8 sm:-top-9"
+                      }`}
                       aria-hidden
                     >
                       <div className="water-can-pour relative">
@@ -640,8 +663,14 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handlePotClick}
-                    aria-label={`레벨 ${level} 화분을 눌러 물 주기`}
-                    className={`relative z-0 flex cursor-pointer items-end justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
+                    aria-label={
+                      isSeedStage
+                        ? "씨앗을 눌러 물 주기"
+                        : `레벨 ${level} 화분을 눌러 물 주기`
+                    }
+                    className={`relative z-0 flex cursor-pointer justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
+                      isSeedStage ? "items-center" : "items-end"
+                    } ${
                       plantFx === "shake"
                         ? "plant-shake"
                         : plantFx === "bloom"
@@ -651,16 +680,31 @@ export default function Home() {
                             : "plant-float"
                     }`}
                   >
-                    <Image
-                      key={level}
-                      src={sproutSrc}
-                      alt={`레벨 ${level} 마음의 화분`}
-                      width={SPROUT_WIDTH}
-                      height={SPROUT_HEIGHT}
-                      priority
-                      draggable={false}
-                      className={`pointer-events-none h-auto w-[4.75rem] select-none object-contain object-bottom drop-shadow-[-3px_5px_10px_rgba(62,52,42,0.28)] transition-all duration-700 sm:w-[5.5rem] ${potToneClass}`}
-                    />
+                    {isSeedStage ? (
+                      <Image
+                        key="seed"
+                        src="/seed.png"
+                        alt="마음의 씨앗"
+                        width={SEED_SIZE}
+                        height={SEED_SIZE}
+                        priority
+                        draggable={false}
+                        className={`pointer-events-none h-auto w-28 select-none object-contain drop-shadow-[0_10px_18px_rgba(62,52,42,0.18)] transition-all duration-700 sm:w-32 ${potToneClass}`}
+                      />
+                    ) : (
+                      sproutSrc && (
+                        <Image
+                          key={level}
+                          src={sproutSrc}
+                          alt={`레벨 ${level} 마음의 화분`}
+                          width={SPROUT_WIDTH}
+                          height={SPROUT_HEIGHT}
+                          priority
+                          draggable={false}
+                          className={`pointer-events-none h-auto w-[4.75rem] select-none object-contain object-bottom drop-shadow-[-3px_5px_10px_rgba(62,52,42,0.28)] transition-all duration-700 sm:w-[5.5rem] ${potToneClass}`}
+                        />
+                      )
+                    )}
                   </button>
                 </div>
               </div>
@@ -670,7 +714,9 @@ export default function Home() {
               {getPlantStatus(hp, level, wiltedByNegative)}
             </p>
             <p className="mt-2 pb-1 text-center text-xs text-[#8ba4b4]">
-              긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요
+              {isSeedStage
+                ? "긍정의 말 한마디가 씨앗을 깨워요 · 씨앗을 터치해 물도 줄 수 있어요"
+                : "긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요"}
             </p>
           </main>
 
