@@ -187,6 +187,33 @@ const QUICK_HINTS = ["오늘도 잘했어", "힘들어", "감사해", "행복해
 const SPROUT_WIDTH = 176;
 const SPROUT_HEIGHT = 331;
 
+type BackgroundId = "room" | "beige" | "garden";
+
+const BACKGROUNDS: {
+  id: BackgroundId;
+  label: string;
+  src?: string;
+  imageClass?: string;
+  sceneClass?: string;
+}[] = [
+  {
+    id: "room",
+    label: "햇살 창가",
+    src: "/background-01.png",
+    imageClass: "object-cover object-[center_40%]",
+  },
+  {
+    id: "beige",
+    label: "몽글 베이지",
+    sceneClass: "bg-gradient-to-b from-[#f7f2ea] via-[#efe8dc] to-[#e4d8c8]",
+  },
+  {
+    id: "garden",
+    label: "초록 정원",
+    sceneClass: "bg-gradient-to-b from-[#dfe8d4] via-[#cdd9c0] to-[#b5c7a3]",
+  },
+];
+
 export default function Home() {
   const [level, setLevel] = useState(1);
   const [hp, setHp] = useState(50);
@@ -198,6 +225,8 @@ export default function Home() {
   const [plantFx, setPlantFx] = useState<PlantFx>("float");
   const [hpGlow, setHpGlow] = useState<"none" | "up" | "down">("none");
   const [watering, setWatering] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -242,7 +271,7 @@ export default function Home() {
 
     if (newHp >= LEVEL_UP_THRESHOLD) {
       newLevel = level + 1;
-      newHp = 40;
+      newHp = 0;
     }
 
     setHp(newHp);
@@ -346,6 +375,8 @@ export default function Home() {
 
   const hpPercent = Math.round((hp / MAX_HP) * 100);
   const sproutSrc = getSproutSrc(level);
+  const selectedBackground =
+    BACKGROUNDS.find((bg) => bg.id === backgroundId) ?? BACKGROUNDS[0];
   const potToneClass =
     hp === 0
       ? "grayscale opacity-45 saturate-50"
@@ -429,8 +460,72 @@ export default function Home() {
         </div>
 
         <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="메뉴 열기"
+            aria-expanded={menuOpen}
+            className="absolute left-4 top-[max(1.25rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white sm:left-6 sm:top-8"
+          >
+            <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
+            <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
+            <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
+          </button>
+
+          {menuOpen && (
+            <>
+              <button
+                type="button"
+                aria-label="메뉴 닫기"
+                className="fixed inset-0 z-40 bg-[#4a5248]/20"
+                onClick={() => setMenuOpen(false)}
+              />
+              <nav className="absolute left-4 top-[calc(max(1.25rem,env(safe-area-inset-top))+3rem)] z-50 w-52 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md sm:left-6 sm:top-[calc(2rem+3rem)]">
+                <p className="border-b border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
+                  배경 선택
+                </p>
+                <ul className="p-2">
+                  {BACKGROUNDS.map((bg) => (
+                    <li key={bg.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBackgroundId(bg.id);
+                          setMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                          backgroundId === bg.id
+                            ? "bg-[#9caf88]/20 font-semibold text-[#3d5235]"
+                            : "text-[#4a5248] hover:bg-[#f5f0e8]"
+                        }`}
+                      >
+                        <span
+                          className={`h-8 w-10 shrink-0 overflow-hidden rounded-md border border-[#e8dcc8] ${
+                            bg.sceneClass ?? "bg-[#f0ebe3]"
+                          }`}
+                          aria-hidden
+                        >
+                          {bg.src && (
+                            <Image
+                              src={bg.src}
+                              alt=""
+                              width={40}
+                              height={32}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
+                        </span>
+                        {bg.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </>
+          )}
+
           {/* ── 상단: 레벨 & HP ── */}
-          <header className="shrink-0 space-y-3">
+          <header className="shrink-0 space-y-3 pl-12 sm:pl-14">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
@@ -482,15 +577,19 @@ export default function Home() {
               YOUR SEED POT
             </p>
 
-            <div className="relative min-h-[11.5rem] w-full flex-1 overflow-hidden rounded-2xl border border-[#e8dcc8]/80 shadow-md sm:min-h-[13.5rem]">
-              <Image
-                src="/background-01.png"
-                alt=""
-                fill
-                sizes="(max-width: 768px) 100vw, 512px"
-                className="object-cover object-[center_40%]"
-                priority
-              />
+            <div
+              className={`relative min-h-[11.5rem] w-full flex-1 overflow-hidden rounded-2xl border border-[#e8dcc8]/80 shadow-md sm:min-h-[13.5rem] ${selectedBackground.sceneClass ?? ""}`}
+            >
+              {selectedBackground.src && (
+                <Image
+                  src={selectedBackground.src}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 100vw, 512px"
+                  className={selectedBackground.imageClass ?? "object-cover"}
+                  priority
+                />
+              )}
 
               <div className="absolute inset-x-0 bottom-[5%] z-[1] flex justify-center sm:bottom-[6%]">
                 <div className="relative flex justify-center">
