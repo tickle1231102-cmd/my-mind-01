@@ -213,7 +213,7 @@ const BACKGROUNDS: {
     id: "room",
     label: "햇살 창가",
     src: "/background-01.png",
-    imageClass: "object-cover object-[center_40%]",
+    imageClass: "object-cover object-[center_55%]",
   },
   {
     id: "beige",
