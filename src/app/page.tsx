@@ -476,68 +476,73 @@ export default function Home() {
             </div>
           </header>
 
-          {/* ── 성장 공간 + 화분 (하단 고정) ── */}
+          {/* ── 성장 공간 + 화분 (배경 위) ── */}
           <main className="flex min-h-0 flex-1 flex-col">
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-end">
-              <p className="mb-auto pt-2 text-center text-[11px] font-semibold tracking-[0.28em] text-[#8ba4b4]">
-                YOUR SEED POT
-              </p>
+            <p className="mb-2 text-center text-[11px] font-semibold tracking-[0.28em] text-[#8ba4b4]">
+              YOUR SEED POT
+            </p>
 
-              {/* 꽃이 자랄 상단 공간 */}
-              <div
-                className="mb-1 w-full flex-1"
-                aria-hidden
+            <div className="relative min-h-[11.5rem] w-full flex-1 overflow-hidden rounded-2xl border border-[#e8dcc8]/80 shadow-md sm:min-h-[13.5rem]">
+              <Image
+                src="/background-01.png"
+                alt=""
+                fill
+                sizes="(max-width: 768px) 100vw, 512px"
+                className="object-cover object-[center_40%]"
+                priority
               />
 
-              <div className="relative flex w-full shrink-0 justify-center pb-0">
-                {watering && (
-                  <div
-                    className="pointer-events-none absolute bottom-[58%] left-1/2 z-10 -translate-x-1/2 sm:bottom-[60%]"
-                    aria-hidden
-                  >
-                    <div className="water-can-pour relative">
-                      <Image
-                        src="/watering-can.png"
-                        alt=""
-                        width={256}
-                        height={256}
-                        className="h-10 w-10 drop-shadow-md sm:h-12 sm:w-12"
-                      />
-                      <div className="absolute left-1.5 top-[2.1rem] flex flex-col items-center sm:left-2 sm:top-[2.55rem]">
-                        <div className="water-stream w-0.5 rounded-full bg-[#8ec5e8]/80" />
-                        <span className="water-drop mt-0.5 block h-1 w-1 rounded-full bg-[#8ec5e8]" />
-                        <span className="water-drop water-drop-delay mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#a3d4f0]" />
-                        <span className="water-drop water-drop-delay-2 mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#b8dff7]" />
+              <div className="absolute inset-x-0 bottom-[5%] z-[1] flex justify-center sm:bottom-[6%]">
+                <div className="relative flex justify-center">
+                  {watering && (
+                    <div
+                      className="pointer-events-none absolute -top-8 left-1/2 z-10 -translate-x-1/2 sm:-top-9"
+                      aria-hidden
+                    >
+                      <div className="water-can-pour relative">
+                        <Image
+                          src="/watering-can.png"
+                          alt=""
+                          width={256}
+                          height={256}
+                          className="h-10 w-10 drop-shadow-md sm:h-12 sm:w-12"
+                        />
+                        <div className="absolute left-1.5 top-[2.1rem] flex flex-col items-center sm:left-2 sm:top-[2.55rem]">
+                          <div className="water-stream w-0.5 rounded-full bg-[#8ec5e8]/80" />
+                          <span className="water-drop mt-0.5 block h-1 w-1 rounded-full bg-[#8ec5e8]" />
+                          <span className="water-drop water-drop-delay mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#a3d4f0]" />
+                          <span className="water-drop water-drop-delay-2 mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#b8dff7]" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <button
-                  type="button"
-                  onClick={handlePotClick}
-                  aria-label={`레벨 ${level} 화분을 눌러 물 주기`}
-                  className={`relative z-0 flex cursor-pointer items-end justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
-                    plantFx === "shake"
-                      ? "plant-shake"
-                      : plantFx === "bloom"
-                        ? "plant-bloom"
-                        : plantFx === "wilt"
-                          ? "plant-wilt"
-                          : "plant-float"
-                  }`}
-                >
-                  <Image
-                    key={level}
-                    src={sproutSrc}
-                    alt={`레벨 ${level} 마음의 화분`}
-                    width={SPROUT_WIDTH}
-                    height={SPROUT_HEIGHT}
-                    priority
-                    draggable={false}
-                    className={`pointer-events-none h-auto w-[4.75rem] select-none object-contain object-bottom drop-shadow-[0_8px_14px_rgba(74,82,72,0.14)] transition-all duration-700 sm:w-[5.5rem] ${potToneClass}`}
-                  />
-                </button>
+                  <button
+                    type="button"
+                    onClick={handlePotClick}
+                    aria-label={`레벨 ${level} 화분을 눌러 물 주기`}
+                    className={`relative z-0 flex cursor-pointer items-end justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
+                      plantFx === "shake"
+                        ? "plant-shake"
+                        : plantFx === "bloom"
+                          ? "plant-bloom"
+                          : plantFx === "wilt"
+                            ? "plant-wilt"
+                            : "plant-float"
+                    }`}
+                  >
+                    <Image
+                      key={level}
+                      src={sproutSrc}
+                      alt={`레벨 ${level} 마음의 화분`}
+                      width={SPROUT_WIDTH}
+                      height={SPROUT_HEIGHT}
+                      priority
+                      draggable={false}
+                      className={`pointer-events-none h-auto w-[4.75rem] select-none object-contain object-bottom drop-shadow-[-3px_5px_10px_rgba(62,52,42,0.28)] transition-all duration-700 sm:w-[5.5rem] ${potToneClass}`}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
 
