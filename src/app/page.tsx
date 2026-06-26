@@ -214,7 +214,7 @@ const QUICK_HINTS = ["오늘도 잘했어", "힘들어", "감사해", "행복해
 const SPROUT_WIDTH = 176;
 const SPROUT_HEIGHT = 331;
 
-type BackgroundId = "room" | "beige" | "garden";
+type BackgroundId = "room" | "beige" | "garden" | "grassland";
 
 const BACKGROUNDS: {
   id: BackgroundId;
@@ -238,6 +238,12 @@ const BACKGROUNDS: {
     id: "garden",
     label: "초록 정원",
     sceneClass: "bg-gradient-to-b from-[#dfe8d4] via-[#cdd9c0] to-[#b5c7a3]",
+  },
+  {
+    id: "grassland",
+    label: "푸른 초원",
+    src: "/grassland01.png",
+    imageClass: "object-cover object-center",
   },
 ];
 
@@ -683,7 +689,7 @@ export default function Home() {
                     {isSeedStage ? (
                       <Image
                         key="seed"
-                        src="/seed.png"
+                        src="/seed001.png"
                         alt="마음의 씨앗"
                         width={SEED_SIZE}
                         height={SEED_SIZE}
