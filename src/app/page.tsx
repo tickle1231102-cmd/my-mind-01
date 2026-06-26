@@ -547,15 +547,18 @@ export default function Home() {
           )}
 
           {/* ── 상단: 레벨 & HP ── */}
-          <header className="shrink-0 space-y-3 pl-12 sm:pl-14">
+          <header className="shrink-0 space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
-                  HEALING GARDEN
-                </p>
-                <h1 className="text-xl font-bold text-[#4a5248] sm:text-2xl">
-                  마음의 화분
-                </h1>
+              <div className="flex min-w-0 flex-1 items-center">
+                <div className="w-10 shrink-0" aria-hidden />
+                <div>
+                  <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
+                    HEALING GARDEN
+                  </p>
+                  <h1 className="text-xl font-bold text-[#4a5248] sm:text-2xl">
+                    마음의 화분
+                  </h1>
+                </div>
               </div>
               <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
