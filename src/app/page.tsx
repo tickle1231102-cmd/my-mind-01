@@ -5,109 +5,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
 
-/* ── 긍정 / 부정 키워드 사전 ── */
-const POSITIVE_WORDS = [
-  "감사",
-  "행복",
-  "잘했",
-  "최고",
-  "좋아",
-  "좋은",
-  "사랑",
-  "희망",
-  "기쁨",
-  "성공",
-  "응원",
-  "축하",
-  "힐링",
-  "긍정",
-  "멋지",
-  "예쁘",
-  "힘내",
-  "해냈",
-  "달성",
-  "완벽",
-  "평화",
-  "따뜻",
-  "포근",
-  "즐거",
-  "만족",
-  "괜찮",
-  "회복",
-  "치유",
-  "자랑",
-  "소중",
-  "웃음",
-  "설렘",
-  "편안",
-  "고마",
-  "잘될",
-  "할 수",
-  "가능",
-  "good",
-  "great",
-  "love",
-  "happy",
-  "thanks",
-  "hope",
-  "proud",
-  "nice",
-  "wonderful",
-];
-
-const NEGATIVE_WORDS = [
-  "짜증",
-  "힘들",
-  "우울",
-  "실패",
-  "슬픔",
-  "화나",
-  "분노",
-  "싫어",
-  "미워",
-  "최악",
-  "포기",
-  "외로",
-  "불안",
-  "걱정",
-  "피곤",
-  "지침",
-  "아프",
-  "절망",
-  "후회",
-  "답답",
-  "막막",
-  "스트레스",
-  "무서",
-  "두려",
-  "괴로",
-  "고통",
-  "열받",
-  "우울해",
-  "힘들어",
-  "짜증나",
-  "싫다",
-  "못하",
-  "안돼",
-  "sad",
-  "angry",
-  "hate",
-  "fail",
-  "tired",
-  "stress",
-  "lonely",
-  "awful",
-  "bad",
-  "depressed",
-];
+/* ── 긍정 / 부정 키워드 사전은 lib/sentiment.ts 에서 관리 ── */
 
 const MAX_HP = 100;
 const HP_GAIN = 15;
 const HP_LOSS = 18;
 const HP_POT_GAIN = 5;
 const LEVEL_UP_THRESHOLD = MAX_HP;
-
-type Sentiment = "positive" | "negative" | "neutral";
 
 type Message = {
   id: number;
@@ -117,15 +21,6 @@ type Message = {
 };
 
 type PlantFx = "float" | "shake" | "bloom" | "wilt";
-
-function detectSentiment(text: string): Sentiment {
-  const t = text.toLowerCase();
-  const pos = POSITIVE_WORDS.some((w) => t.includes(w));
-  const neg = NEGATIVE_WORDS.some((w) => t.includes(w));
-  if (pos && !neg) return "positive";
-  if (neg && !pos) return "negative";
-  return "neutral";
-}
 
 function randomOf<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -168,7 +63,7 @@ function getPlantStatus(
   };
 
   if (hp === 0) {
-    return `레벨 ${level} 달성! 긍정의 말로 다시 키워 보세요`;
+    return `레벨 ${level} 달성! 긍정의 말로 키워 보세요`;
   }
   if (wiltedByNegative && hp <= 25) {
     return "마음이 무거워요… 따뜻한 말이 필요해요";
@@ -211,7 +106,15 @@ const BOT = {
   ],
 };
 
-const QUICK_HINTS = ["오늘도 잘했어", "힘들어", "감사해", "행복해"];
+const QUICK_HINTS = ["오늘도 고생했어", "힘들어", "감사해", "행복해"];
+
+const QUICK_EMOJIS: { emoji: string; tone: "positive" | "negative" }[] = [
+  { emoji: "😊", tone: "positive" },
+  { emoji: "🙂", tone: "positive" },
+  { emoji: "😚", tone: "positive" },
+  { emoji: "😭", tone: "negative" },
+  { emoji: "😡", tone: "negative" },
+];
 
 const SPROUT_WIDTH = 176;
 const SPROUT_HEIGHT = 331;
@@ -244,7 +147,117 @@ const BACKGROUNDS: {
   },
 ];
 
+type MenuSection = "main" | "background";
+
+type MenuItemId = "journey" | "store" | "item" | "background" | "calendar";
+
+const MENU_ITEMS: { id: MenuItemId; label: string }[] = [
+  { id: "journey", label: "Journey" },
+  { id: "store", label: "Store" },
+  { id: "item", label: "Item" },
+  { id: "background", label: "Background" },
+  { id: "calendar", label: "Calendar" },
+];
+
+function MenuIcon({ id }: { id: MenuItemId }) {
+  const className = "h-5 w-5 shrink-0 text-[#6d8a5e]";
+
+  switch (id) {
+    case "journey":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+          <path
+            d="M4 18 9 5l3 7 4-4 4 10"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="9" cy="5" r="1.5" fill="currentColor" />
+        </svg>
+      );
+    case "store":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+          <path
+            d="M5 9h14l-1.2 11H6.2L5 9Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8 9V7a4 4 0 0 1 8 0v2"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    case "item":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+          <path
+            d="M12 3 20 7v10l-8 4-8-4V7l8-4Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M12 11v10M4.5 7.5 12 11l7.5-3.5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "background":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+          <rect
+            x="3"
+            y="5"
+            width="18"
+            height="14"
+            rx="2"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          />
+          <path
+            d="M3 15l5-4 4 3 3-2 6 5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="8" cy="9" r="1.5" fill="currentColor" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+          <rect
+            x="4"
+            y="5"
+            width="16"
+            height="15"
+            rx="2"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          />
+          <path
+            d="M8 3v4M16 3v4M4 10h16"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <rect x="8" y="13" width="3" height="3" rx="0.5" fill="currentColor" />
+        </svg>
+      );
+  }
+}
+
 export default function Home() {
+  const router = useRouter();
   const [level, setLevel] = useState(0);
   const [hp, setHp] = useState(0);
   const [messages, setMessages] = useState<Message[]>([
@@ -256,6 +269,7 @@ export default function Home() {
   const [hpGlow, setHpGlow] = useState<"none" | "up" | "down">("none");
   const [watering, setWatering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuSection, setMenuSection] = useState<MenuSection>("main");
   const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
   const [wiltedByNegative, setWiltedByNegative] = useState(false);
 
@@ -343,15 +357,11 @@ export default function Home() {
     setTimeout(() => setHpGlow("none"), 800);
   }
 
-  function sendMessage(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text) return;
+  function dispatchUserMessage(text: string, tone: Sentiment) {
+    recordMoodEntry(text, tone);
 
-    const tone = detectSentiment(text);
     const batch: Message[] = [{ id: nextId, from: "user", text, tone }];
     let id = nextId + 1;
-
     let newHp = hp;
     let newLevel = level;
     const wasDead = hp === 0 && wiltedByNegative;
@@ -378,10 +388,10 @@ export default function Home() {
 
       setMessages((prev) => [...prev, ...batch]);
       setNextId(id);
-      setInput("");
-      inputRef.current?.focus();
       return;
-    } else if (tone === "negative") {
+    }
+
+    if (tone === "negative") {
       newHp = Math.max(0, hp - HP_LOSS);
       setWiltedByNegative(true);
       flashHpGlow("down");
@@ -405,12 +415,25 @@ export default function Home() {
     setLevel(newLevel);
     setMessages((prev) => [...prev, ...batch]);
     setNextId(id);
+  }
+
+  function sendMessage(e: React.FormEvent) {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text) return;
+
+    dispatchUserMessage(text, detectSentiment(text));
     setInput("");
     inputRef.current?.focus();
   }
 
   function sendHint(hint: string) {
     setInput(hint);
+    inputRef.current?.focus();
+  }
+
+  function sendEmoji(emoji: string, tone: "positive" | "negative") {
+    dispatchUserMessage(emoji, tone);
     inputRef.current?.focus();
   }
 
@@ -506,7 +529,12 @@ export default function Home() {
         <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
           <button
             type="button"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={() => {
+              setMenuOpen((open) => {
+                if (open) setMenuSection("main");
+                return !open;
+              });
+            }}
             aria-label="메뉴 열기"
             aria-expanded={menuOpen}
             className="absolute left-4 top-[max(1.25rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white sm:left-6 sm:top-8"
@@ -522,7 +550,10 @@ export default function Home() {
                 type="button"
                 aria-label="메뉴 닫기"
                 className="fixed inset-0 z-40 bg-[#4a5248]/20"
-                onClick={() => setMenuOpen(false)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setMenuSection("main");
+                }}
               />
               <nav className="absolute left-4 top-[calc(max(1.25rem,env(safe-area-inset-top))+3rem)] z-50 w-52 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md sm:left-6 sm:top-[calc(2rem+3rem)]">
                 <p className="border-b border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
@@ -553,37 +584,71 @@ export default function Home() {
                     <li key={bg.id}>
                       <button
                         type="button"
-                        onClick={() => {
-                          setBackgroundId(bg.id);
-                          setMenuOpen(false);
-                        }}
-                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                          backgroundId === bg.id
-                            ? "bg-[#9caf88]/20 font-semibold text-[#3d5235]"
-                            : "text-[#4a5248] hover:bg-[#f5f0e8]"
-                        }`}
+                        onClick={() => setMenuSection("main")}
+                        aria-label="메뉴로 돌아가기"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#4a5248] transition hover:bg-[#f5f0e8]"
                       >
-                        <span
-                          className={`h-8 w-10 shrink-0 overflow-hidden rounded-md border border-[#e8dcc8] ${
-                            bg.sceneClass ?? "bg-[#f0ebe3]"
-                          }`}
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="h-4 w-4"
                           aria-hidden
                         >
-                          {bg.src && (
-                            <Image
-                              src={bg.src}
-                              alt=""
-                              width={40}
-                              height={32}
-                              className="h-full w-full object-cover"
-                            />
-                          )}
-                        </span>
-                        {bg.label}
+                          <path
+                            d="M15 6 9 12l6 6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
                       </button>
-                    </li>
-                  ))}
-                </ul>
+                      <div className="flex items-center gap-2">
+                        <MenuIcon id="background" />
+                        <p className="text-sm font-semibold text-[#4a5248]">
+                          Background
+                        </p>
+                      </div>
+                    </div>
+                    <ul className="p-2">
+                      {BACKGROUNDS.map((bg) => (
+                        <li key={bg.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBackgroundId(bg.id);
+                              setMenuOpen(false);
+                              setMenuSection("main");
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                              backgroundId === bg.id
+                                ? "bg-[#9caf88]/20 font-semibold text-[#3d5235]"
+                                : "text-[#4a5248] hover:bg-[#f5f0e8]"
+                            }`}
+                          >
+                            <span
+                              className={`h-8 w-10 shrink-0 overflow-hidden rounded-md border border-[#e8dcc8] ${
+                                bg.sceneClass ?? "bg-[#f0ebe3]"
+                              }`}
+                              aria-hidden
+                            >
+                              {bg.src && (
+                                <Image
+                                  src={bg.src}
+                                  alt=""
+                                  width={40}
+                                  height={32}
+                                  className="h-full w-full object-cover"
+                                />
+                              )}
+                            </span>
+                            {bg.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </nav>
             </>
           )}
@@ -604,7 +669,7 @@ export default function Home() {
               </div>
               <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
-                  Level
+                  Mind level
                 </p>
                 <p className="text-2xl font-bold text-[#6d8a5e]">Lv.{level}</p>
               </div>
@@ -780,7 +845,7 @@ export default function Home() {
             </div>
 
             {/* 빠른 입력 힌트 */}
-            <div className="flex flex-wrap gap-1.5 border-t border-[#ede8df]/60 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-[#ede8df]/60 px-3 py-2">
               {QUICK_HINTS.map((hint) => (
                 <button
                   key={hint}
@@ -789,6 +854,23 @@ export default function Home() {
                   className="rounded-full border border-[#e8dcc8] bg-[#FDFBF7] px-3 py-1 text-[11px] font-medium text-[#6d8a5e] transition hover:border-[#9caf88] hover:bg-[#9caf88]/10 active:scale-95 sm:text-xs"
                 >
                   {hint}
+                </button>
+              ))}
+              {QUICK_EMOJIS.map(({ emoji, tone }) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => sendEmoji(emoji, tone)}
+                  aria-label={
+                    tone === "positive" ? `긍정 이모지 ${emoji}` : `부정 이모지 ${emoji}`
+                  }
+                  className={`rounded-full border bg-[#FDFBF7] px-2.5 py-1 text-base leading-none transition active:scale-95 ${
+                    tone === "positive"
+                      ? "border-[#d4e4c8] hover:border-[#9caf88] hover:bg-[#9caf88]/10"
+                      : "border-[#d8e2e8] hover:border-[#a3bcc9] hover:bg-[#a3bcc9]/15"
+                  }`}
+                >
+                  {emoji}
                 </button>
               ))}
             </div>
