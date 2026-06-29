@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
 
 /* ── 긍정 / 부정 키워드 사전 ── */
 const POSITIVE_WORDS = [
@@ -267,6 +269,10 @@ export default function Home() {
   }, [messages]);
 
   useEffect(() => {
+    saveDayMessages(formatDateKey(new Date()), messages);
+  }, [messages]);
+
+  useEffect(() => {
     const audio = new Audio("/pop11.mp3");
     audio.preload = "auto";
     popSoundRef.current = audio;
@@ -520,6 +526,26 @@ export default function Home() {
               />
               <nav className="absolute left-4 top-[calc(max(1.25rem,env(safe-area-inset-top))+3rem)] z-50 w-52 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md sm:left-6 sm:top-[calc(2rem+3rem)]">
                 <p className="border-b border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
+                  메뉴
+                </p>
+                <ul className="p-2">
+                  <li>
+                    <Link
+                      href="/calendar"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
+                    >
+                      <span
+                        className="flex h-8 w-10 shrink-0 items-center justify-center rounded-md border border-[#e8dcc8] bg-[#FDFBF7] text-base"
+                        aria-hidden
+                      >
+                        📅
+                      </span>
+                      마음 달력
+                    </Link>
+                  </li>
+                </ul>
+                <p className="border-t border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
                   배경 선택
                 </p>
                 <ul className="p-2">
