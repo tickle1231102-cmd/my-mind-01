@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { recordMoodEntry } from "@/lib/mood-log";
-import { detectSentiment, type Sentiment } from "@/lib/sentiment";
+import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
 
 /* ── 긍정 / 부정 키워드 사전은 lib/sentiment.ts 에서 관리 ── */
 
@@ -64,7 +63,7 @@ function getPlantStatus(
   };
 
   if (hp === 0) {
-    return `레벨 ${level} 달성! 긍정의 말로 다시 키워 보세요`;
+    return `레벨 ${level} 달성! 긍정의 말로 키워 보세요`;
   }
   if (wiltedByNegative && hp <= 25) {
     return "마음이 무거워요… 따뜻한 말이 필요해요";
@@ -107,7 +106,7 @@ const BOT = {
   ],
 };
 
-const QUICK_HINTS = ["오늘도 잘했어", "힘들어", "감사해", "행복해"];
+const QUICK_HINTS = ["오늘도 고생했어", "힘들어", "감사해", "행복해"];
 
 const QUICK_EMOJIS: { emoji: string; tone: "positive" | "negative" }[] = [
   { emoji: "😊", tone: "positive" },
@@ -281,6 +280,10 @@ export default function Home() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    saveDayMessages(formatDateKey(new Date()), messages);
   }, [messages]);
 
   useEffect(() => {
@@ -552,43 +555,33 @@ export default function Home() {
                   setMenuSection("main");
                 }}
               />
-              <nav className="absolute left-4 top-[calc(max(1.25rem,env(safe-area-inset-top))+3rem)] z-50 w-56 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md sm:left-6 sm:top-[calc(2rem+3rem)]">
-                {menuSection === "main" ? (
-                  <>
-                    <p className="border-b border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
-                      Menu
-                    </p>
-                    <ul className="p-2">
-                      {MENU_ITEMS.map((item) => (
-                        <li key={item.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (item.id === "background") {
-                                setMenuSection("background");
-                                return;
-                              }
-                              if (item.id === "calendar") {
-                                setMenuOpen(false);
-                                setMenuSection("main");
-                                router.push("/calendar");
-                                return;
-                              }
-                              setMenuOpen(false);
-                              setMenuSection("main");
-                            }}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
-                          >
-                            <MenuIcon id={item.id} />
-                            {item.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 border-b border-[#ede8df] px-3 py-3">
+              <nav className="absolute left-4 top-[calc(max(1.25rem,env(safe-area-inset-top))+3rem)] z-50 w-52 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md sm:left-6 sm:top-[calc(2rem+3rem)]">
+                <p className="border-b border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
+                  메뉴
+                </p>
+                <ul className="p-2">
+                  <li>
+                    <Link
+                      href="/calendar"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
+                    >
+                      <span
+                        className="flex h-8 w-10 shrink-0 items-center justify-center rounded-md border border-[#e8dcc8] bg-[#FDFBF7] text-base"
+                        aria-hidden
+                      >
+                        📅
+                      </span>
+                      마음 달력
+                    </Link>
+                  </li>
+                </ul>
+                <p className="border-t border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
+                  배경 선택
+                </p>
+                <ul className="p-2">
+                  {BACKGROUNDS.map((bg) => (
+                    <li key={bg.id}>
                       <button
                         type="button"
                         onClick={() => setMenuSection("main")}
