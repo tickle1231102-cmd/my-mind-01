@@ -1,111 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { recordMoodEntry } from "@/lib/mood-log";
+import { detectSentiment, type Sentiment } from "@/lib/sentiment";
 
-/* ── 긍정 / 부정 키워드 사전 ── */
-const POSITIVE_WORDS = [
-  "감사",
-  "행복",
-  "잘했",
-  "최고",
-  "좋아",
-  "좋은",
-  "사랑",
-  "희망",
-  "기쁨",
-  "성공",
-  "응원",
-  "축하",
-  "힐링",
-  "긍정",
-  "멋지",
-  "예쁘",
-  "힘내",
-  "해냈",
-  "달성",
-  "완벽",
-  "평화",
-  "따뜻",
-  "포근",
-  "즐거",
-  "만족",
-  "괜찮",
-  "회복",
-  "치유",
-  "자랑",
-  "소중",
-  "웃음",
-  "설렘",
-  "편안",
-  "고마",
-  "잘될",
-  "할 수",
-  "가능",
-  "good",
-  "great",
-  "love",
-  "happy",
-  "thanks",
-  "hope",
-  "proud",
-  "nice",
-  "wonderful",
-];
-
-const NEGATIVE_WORDS = [
-  "짜증",
-  "힘들",
-  "우울",
-  "실패",
-  "슬픔",
-  "화나",
-  "분노",
-  "싫어",
-  "미워",
-  "최악",
-  "포기",
-  "외로",
-  "불안",
-  "걱정",
-  "피곤",
-  "지침",
-  "아프",
-  "절망",
-  "후회",
-  "답답",
-  "막막",
-  "스트레스",
-  "무서",
-  "두려",
-  "괴로",
-  "고통",
-  "열받",
-  "우울해",
-  "힘들어",
-  "짜증나",
-  "싫다",
-  "못하",
-  "안돼",
-  "sad",
-  "angry",
-  "hate",
-  "fail",
-  "tired",
-  "stress",
-  "lonely",
-  "awful",
-  "bad",
-  "depressed",
-];
+/* ── 긍정 / 부정 키워드 사전은 lib/sentiment.ts 에서 관리 ── */
 
 const MAX_HP = 100;
 const HP_GAIN = 15;
 const HP_LOSS = 18;
 const HP_POT_GAIN = 5;
 const LEVEL_UP_THRESHOLD = MAX_HP;
-
-type Sentiment = "positive" | "negative" | "neutral";
 
 type Message = {
   id: number;
@@ -115,15 +22,6 @@ type Message = {
 };
 
 type PlantFx = "float" | "shake" | "bloom" | "wilt";
-
-function detectSentiment(text: string): Sentiment {
-  const t = text.toLowerCase();
-  const pos = POSITIVE_WORDS.some((w) => t.includes(w));
-  const neg = NEGATIVE_WORDS.some((w) => t.includes(w));
-  if (pos && !neg) return "positive";
-  if (neg && !pos) return "negative";
-  return "neutral";
-}
 
 function randomOf<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -360,6 +258,7 @@ function MenuIcon({ id }: { id: MenuItemId }) {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [level, setLevel] = useState(0);
   const [hp, setHp] = useState(0);
   const [messages, setMessages] = useState<Message[]>([
@@ -456,6 +355,8 @@ export default function Home() {
   }
 
   function dispatchUserMessage(text: string, tone: Sentiment) {
+    recordMoodEntry(text, tone);
+
     const batch: Message[] = [{ id: nextId, from: "user", text, tone }];
     let id = nextId + 1;
     let newHp = hp;
@@ -665,6 +566,12 @@ export default function Home() {
                             onClick={() => {
                               if (item.id === "background") {
                                 setMenuSection("background");
+                                return;
+                              }
+                              if (item.id === "calendar") {
+                                setMenuOpen(false);
+                                setMenuSection("main");
+                                router.push("/calendar");
                                 return;
                               }
                               setMenuOpen(false);
