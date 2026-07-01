@@ -5,6 +5,7 @@ import {
   hasLoveSignal,
   type Sentiment,
 } from "./sentiment";
+import { getDayMessages, type StoredMessage } from "./chat-history";
 
 export type MoodKind =
   | "joy"
@@ -117,6 +118,32 @@ export function getRepresentativeMood(entries: MoodEntry[]): MoodKind | null {
   return "neutral";
 }
 
+function messagesToMoodEntries(messages: StoredMessage[]): MoodEntry[] {
+  return messages
+    .filter(
+      (message): message is StoredMessage & { tone: Sentiment } =>
+        message.from === "user" && !!message.tone,
+    )
+    .map((message) => ({
+      id: `chat-${message.id}`,
+      text: message.text,
+      tone: message.tone,
+      createdAt: "",
+    }));
+}
+
+export function getRepresentativeMoodFromMessages(
+  messages: StoredMessage[],
+): MoodKind | null {
+  return getRepresentativeMood(messagesToMoodEntries(messages));
+}
+
+export function getMoodForDate(dateKey: string): MoodKind | null {
+  const fromLog = getRepresentativeMood(getEntriesForDate(dateKey));
+  if (fromLog) return fromLog;
+  return getRepresentativeMoodFromMessages(getDayMessages(dateKey));
+}
+
 export function getDailyMood(dateKey: string): DailyMood | null {
   const entries = getEntriesForDate(dateKey);
   const mood = getRepresentativeMood(entries);
@@ -125,15 +152,13 @@ export function getDailyMood(dateKey: string): DailyMood | null {
 }
 
 export function getMoodsForMonth(year: number, month: number): Record<string, MoodKind> {
-  const store = readStore();
   const result: Record<string, MoodKind> = {};
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  for (const [dateKey, entries] of Object.entries(store)) {
-    const [y, m] = dateKey.split("-").map(Number);
-    if (y === year && m === month + 1) {
-      const mood = getRepresentativeMood(entries);
-      if (mood) result[dateKey] = mood;
-    }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateKey = formatDateKey(new Date(year, month, day));
+    const mood = getMoodForDate(dateKey);
+    if (mood) result[dateKey] = mood;
   }
 
   return result;

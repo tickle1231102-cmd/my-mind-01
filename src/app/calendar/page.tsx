@@ -1,5 +1,6 @@
 "use client";
 
+import { MoodBlob } from "@/components/MoodBlob";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -11,6 +12,12 @@ import {
   parseDateKey,
   type StoredMessage,
 } from "@/lib/chat-history";
+import {
+  getMoodForDate,
+  getMoodsForMonth,
+  MOOD_LABELS,
+  type MoodKind,
+} from "@/lib/mood-log";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -61,15 +68,21 @@ export default function CalendarPage() {
   const [selectedMessages, setSelectedMessages] = useState<StoredMessage[]>(
     [],
   );
+  const [monthMoods, setMonthMoods] = useState<Record<string, MoodKind>>({});
 
   const cells = useMemo(
     () => getCalendarCells(viewYear, viewMonth),
     [viewYear, viewMonth],
   );
 
-  useEffect(() => {
+  function refreshMonthMoods() {
+    setMonthMoods(getMoodsForMonth(viewYear, viewMonth));
     setDatesWithMessages(getDatesWithMessages());
-  }, []);
+  }
+
+  useEffect(() => {
+    refreshMonthMoods();
+  }, [viewYear, viewMonth]);
 
   useEffect(() => {
     if (!selectedDateKey || isToday(selectedDateKey)) {
@@ -77,7 +90,7 @@ export default function CalendarPage() {
       return;
     }
     setSelectedMessages(getDayMessages(selectedDateKey));
-    setDatesWithMessages(getDatesWithMessages());
+    refreshMonthMoods();
   }, [selectedDateKey]);
 
   function goPrevMonth() {
@@ -114,6 +127,7 @@ export default function CalendarPage() {
   const userMessageCount = selectedMessages.filter(
     (m) => m.from === "user",
   ).length;
+  const selectedMood = selectedDateKey ? getMoodForDate(selectedDateKey) : null;
 
   return (
     <div className="relative flex min-h-dvh flex-col bg-[#FDFBF7]">
@@ -197,6 +211,7 @@ export default function CalendarPage() {
               const isTodayDate = dateKey === todayKey;
               const isSelected = selectedDateKey === dateKey;
               const hasLog = datesWithMessages.has(dateKey);
+              const dayMood = monthMoods[dateKey];
               const isFuture =
                 parseDateKey(dateKey) > parseDateKey(todayKey);
 
@@ -206,27 +221,24 @@ export default function CalendarPage() {
                   type="button"
                   disabled={isFuture}
                   onClick={() => handleDateClick(day)}
-                  className={`relative flex aspect-square flex-col items-center justify-center rounded-xl text-sm font-medium transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 ${
+                  className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl text-sm font-medium transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 ${
                     isTodayDate
                       ? "border-2 border-[#9caf88] bg-[#9caf88]/20 text-[#3d5235] shadow-sm"
                       : isSelected
                         ? "border-2 border-[#e8a598] bg-[#e8a598]/20 text-[#4a5248]"
-                        : hasLog
+                        : hasLog || dayMood
                           ? "border border-[#e8dcc8] bg-[#FDFBF7] text-[#4a5248] hover:border-[#9caf88]/60 hover:bg-[#9caf88]/10"
                           : "border border-transparent text-[#4a5248] hover:bg-[#f5f0e8]"
                   }`}
-                  aria-label={`${day}일${isTodayDate ? " 오늘" : ""}${hasLog ? " 대화 기록 있음" : ""}`}
+                  aria-label={`${day}일${isTodayDate ? " 오늘" : ""}${dayMood ? ` 대표 감정 ${MOOD_LABELS[dayMood]}` : hasLog ? " 대화 기록 있음" : ""}`}
                   aria-pressed={isSelected}
                 >
-                  {day}
-                  {hasLog && !isTodayDate && (
-                    <span
-                      className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-[#9caf88]"
-                      aria-hidden
-                    />
+                  {dayMood && (
+                    <MoodBlob mood={dayMood} size={22} className="shrink-0" />
                   )}
+                  <span>{day}</span>
                   {isTodayDate && (
-                    <span className="mt-0.5 text-[9px] font-semibold text-[#6d8a5e]">
+                    <span className="text-[9px] font-semibold leading-none text-[#6d8a5e]">
                       오늘
                     </span>
                   )}
@@ -236,22 +248,42 @@ export default function CalendarPage() {
           </div>
 
           <p className="mt-4 text-center text-xs text-[#8ba4b4]">
-            오늘은 메인 화면에서 대화해요 · 다른 날짜를 누르면 기록을 볼 수
-            있어요
+            대화한 날은 감정 아이콘으로 그날의 마음이 표시돼요
           </p>
+
+          <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1.5 border-t border-[#ede8df]/70 pt-3">
+            {(Object.keys(MOOD_LABELS) as MoodKind[]).map((mood) => (
+              <span
+                key={mood}
+                className="inline-flex items-center gap-1 text-[10px] text-[#8ba4b4] sm:text-[11px]"
+              >
+                <MoodBlob mood={mood} size={16} />
+                {MOOD_LABELS[mood]}
+              </span>
+            ))}
+          </div>
         </section>
 
         {showHistoryPanel && selectedDateKey && (
           <section className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md">
             <div className="border-b border-[#ede8df] bg-gradient-to-r from-[#f5f0e8]/80 to-white/60 px-4 py-3">
-              <p className="text-sm font-semibold text-[#4a5248]">
-                {formatKoreanDate(selectedDateKey)}
-              </p>
-              <p className="mt-0.5 text-xs text-[#8ba4b4]">
-                {userMessageCount > 0
-                  ? `그날 나눈 대화 ${userMessageCount}개`
-                  : "이 날은 대화 기록이 없어요"}
-              </p>
+              <div className="flex items-center gap-3">
+                {selectedMood && (
+                  <MoodBlob mood={selectedMood} size={44} className="shrink-0" />
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-[#4a5248]">
+                    {formatKoreanDate(selectedDateKey)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#8ba4b4]">
+                    {selectedMood
+                      ? `그날의 대표 감정 · ${MOOD_LABELS[selectedMood]}`
+                      : userMessageCount > 0
+                        ? `그날 나눈 대화 ${userMessageCount}개`
+                        : "이 날은 대화 기록이 없어요"}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="flex max-h-64 min-h-36 flex-col gap-2 overflow-y-auto px-3 py-3 sm:max-h-80">
