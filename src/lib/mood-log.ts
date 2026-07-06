@@ -170,6 +170,6 @@ export const MOOD_LABELS: Record<MoodKind, string> = {
   calm: "평온",
   neutral: "무난",
   anxious: "불안",
-  sad: "슬픔",
   angry: "화남",
+  sad: "슬픔",
 };

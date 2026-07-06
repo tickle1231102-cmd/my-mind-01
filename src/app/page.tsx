@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
+import { getFallbackReply } from "@/lib/healing-bot";
 import { recordMoodEntry } from "@/lib/mood-log";
 import { detectSentiment, type Sentiment } from "@/lib/sentiment";
 
@@ -75,34 +76,11 @@ function getPlantStatus(
 const BOT = {
   welcome:
     "안녕하세요. 작은 씨앗에게 긍정의 말을 해주면 화분에 싹이 돋아요. 힘든 감정도 편하게 내려놓으세요.",
-  positive: [
-    "그 말이 햇빛이 되었어요! 식물이 기뻐하고 있어요 ☀️",
-    "정말 좋은 에너지예요. 조금씩 자라고 있어요!",
-    "긍정의 씨앗이 싹을 틔웠어요 🌿",
-    "당신의 따뜻한 말이 꽃봉오리를 키우고 있어요.",
-    "오늘도 잘하고 있어요. 식물이 미소 짓고 있어요 😊",
-  ],
-  negative: [
-    "힘든 마음도 괜찮아요. 여기에 쏟아내 보세요 🫂",
-    "그 감정, 화분이 대신 받아줄게요.",
-    "비가 내린 뒤엔 무지개가 떠요. 천천히 숨 고르세요 🌈",
-    "부정적인 감정을 꺼내는 것도 치유의 시작이에요.",
-    "울어도 괜찮아요. 이 정원은 당신 편이에요.",
-  ],
-  neutral: [
-    "어떤 감정이든 괜찮아요. 편하게 이야기해 주세요.",
-    "긍정의 말은 성장, 부정의 말도 받아줄게요.",
-    "천천히 적어 보세요. 식물이 듣고 있어요.",
-  ],
   levelUp: [
     "레벨 업! 씨앗이 화분에 싹을 틔웠어요!",
     "레벨 업! 🎉 마음 정원이 더 넓어졌어요!",
     "새 단계 달성! 식물이 한 단계 진화했어요 ✨",
     "축하해요! 당신의 마음 씨앗이 더 단단해졌어요 🌳",
-  ],
-  revived: [
-    "다시 싹이 돋았어요! 새로운 시작이에요 🌱",
-    "죽었다가 다시 피는 꽃처럼, 당신도 할 수 있어요.",
   ],
 };
 
@@ -271,6 +249,7 @@ export default function Home() {
   const [menuSection, setMenuSection] = useState<MenuSection>("main");
   const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
   const [wiltedByNegative, setWiltedByNegative] = useState(false);
+  const [isBotTyping, setIsBotTyping] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -279,7 +258,7 @@ export default function Home() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isBotTyping]);
 
   useEffect(() => {
     saveDayMessages(formatDateKey(new Date()), messages);
@@ -356,28 +335,87 @@ export default function Home() {
     setTimeout(() => setHpGlow("none"), 800);
   }
 
-  function dispatchUserMessage(text: string, tone: Sentiment) {
+  async function fetchBotReply(
+    message: string,
+    tone: Sentiment,
+    options: {
+      level: number;
+      hp: number;
+      leveledUp: boolean;
+      wasRevived: boolean;
+    },
+  ): Promise<string> {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          tone,
+          level: options.level,
+          hp: options.hp,
+          leveledUp: options.leveledUp,
+          wasRevived: options.wasRevived,
+        }),
+      });
+
+      if (!response.ok) throw new Error("chat api failed");
+
+      const data = (await response.json()) as { reply?: string };
+      const reply = data.reply?.trim();
+      if (reply) return reply;
+    } catch {
+      // fall through to local fallback
+    }
+
+    return getFallbackReply({
+      tone,
+      level: options.level,
+      hp: options.hp,
+      leveledUp: options.leveledUp,
+      wasRevived: options.wasRevived,
+    });
+  }
+
+  async function dispatchUserMessage(text: string, tone: Sentiment) {
+    if (isBotTyping) return;
+
     recordMoodEntry(text, tone);
 
-    const batch: Message[] = [{ id: nextId, from: "user", text, tone }];
+    const userMsg: Message = { id: nextId, from: "user", text, tone };
     let id = nextId + 1;
-    let newHp = hp;
-    let newLevel = level;
+    let leveledUp = false;
     const wasDead = hp === 0 && wiltedByNegative;
 
     if (tone === "positive") {
       const gain = wasDead ? HP_GAIN + 10 : HP_GAIN;
-      const { leveledUp } = applyHpGain(gain, wasDead ? "bloom" : undefined);
+      ({ leveledUp } = applyHpGain(gain, wasDead ? "bloom" : undefined));
+    } else if (tone === "negative") {
+      const newHp = Math.max(0, hp - HP_LOSS);
+      setWiltedByNegative(true);
+      flashHpGlow("down");
+      playFx(newHp === 0 ? "wilt" : "shake");
+      setHp(newHp);
+    }
 
-      batch.push({
-        id: id++,
-        from: "bot",
-        text: wasDead ? randomOf(BOT.revived) : randomOf(BOT.positive),
-        tone: "positive",
+    setMessages((prev) => [...prev, userMsg]);
+    setNextId(id);
+    setIsBotTyping(true);
+
+    try {
+      const reply = await fetchBotReply(text, tone, {
+        level,
+        hp,
+        leveledUp,
+        wasRevived: wasDead && tone === "positive",
       });
 
+      const botBatch: Message[] = [
+        { id: id++, from: "bot", text: reply, tone },
+      ];
+
       if (leveledUp) {
-        batch.push({
+        botBatch.push({
           id: id++,
           from: "bot",
           text: randomOf(BOT.levelUp),
@@ -385,43 +423,19 @@ export default function Home() {
         });
       }
 
-      setMessages((prev) => [...prev, ...batch]);
+      setMessages((prev) => [...prev, ...botBatch]);
       setNextId(id);
-      return;
+    } finally {
+      setIsBotTyping(false);
     }
-
-    if (tone === "negative") {
-      newHp = Math.max(0, hp - HP_LOSS);
-      setWiltedByNegative(true);
-      flashHpGlow("down");
-      playFx(newHp === 0 ? "wilt" : "shake");
-      batch.push({
-        id: id++,
-        from: "bot",
-        text: randomOf(BOT.negative),
-        tone: "negative",
-      });
-    } else {
-      batch.push({
-        id: id++,
-        from: "bot",
-        text: randomOf(BOT.neutral),
-        tone: "neutral",
-      });
-    }
-
-    setHp(newHp);
-    setLevel(newLevel);
-    setMessages((prev) => [...prev, ...batch]);
-    setNextId(id);
   }
 
   function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || isBotTyping) return;
 
-    dispatchUserMessage(text, detectSentiment(text));
+    void dispatchUserMessage(text, detectSentiment(text));
     setInput("");
     inputRef.current?.focus();
   }
@@ -432,7 +446,8 @@ export default function Home() {
   }
 
   function sendEmoji(emoji: string, tone: "positive" | "negative") {
-    dispatchUserMessage(emoji, tone);
+    if (isBotTyping) return;
+    void dispatchUserMessage(emoji, tone);
     inputRef.current?.focus();
   }
 
@@ -573,7 +588,7 @@ export default function Home() {
                               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
                             >
                               <MenuIcon id={item.id} />
-                              마음 달력
+                              Emotion calendar
                             </Link>
                           ) : item.id === "background" ? (
                             <button
@@ -582,7 +597,7 @@ export default function Home() {
                               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
                             >
                               <MenuIcon id={item.id} />
-                              배경 선택
+                              background
                             </button>
                           ) : (
                             <button
@@ -624,7 +639,7 @@ export default function Home() {
                       </button>
                       <MenuIcon id="background" />
                       <p className="text-sm font-semibold text-[#4a5248]">
-                        배경 선택
+                        background
                       </p>
                     </div>
                     <ul className="p-2">
@@ -858,6 +873,13 @@ export default function Home() {
                   </p>
                 </div>
               ))}
+              {isBotTyping && (
+                <div className="flex justify-start">
+                  <p className="rounded-2xl rounded-bl-md bg-[#f0ebe3] px-3.5 py-2 text-[13px] text-[#8ba4b4] sm:text-sm">
+                    마음을 담아 답하는 중…
+                  </p>
+                </div>
+              )}
               <div ref={chatEndRef} />
             </div>
 
@@ -868,7 +890,8 @@ export default function Home() {
                   key={hint}
                   type="button"
                   onClick={() => sendHint(hint)}
-                  className="rounded-full border border-[#e8dcc8] bg-[#FDFBF7] px-3 py-1 text-[11px] font-medium text-[#6d8a5e] transition hover:border-[#9caf88] hover:bg-[#9caf88]/10 active:scale-95 sm:text-xs"
+                  disabled={isBotTyping}
+                  className="rounded-full border border-[#e8dcc8] bg-[#FDFBF7] px-3 py-1 text-[11px] font-medium text-[#6d8a5e] transition hover:border-[#9caf88] hover:bg-[#9caf88]/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:text-xs"
                 >
                   {hint}
                 </button>
@@ -878,10 +901,11 @@ export default function Home() {
                   key={emoji}
                   type="button"
                   onClick={() => sendEmoji(emoji, tone)}
+                  disabled={isBotTyping}
                   aria-label={
                     tone === "positive" ? `긍정 이모지 ${emoji}` : `부정 이모지 ${emoji}`
                   }
-                  className={`rounded-full border bg-[#FDFBF7] px-2.5 py-1 text-base leading-none transition active:scale-95 ${
+                  className={`rounded-full border bg-[#FDFBF7] px-2.5 py-1 text-base leading-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
                     tone === "positive"
                       ? "border-[#d4e4c8] hover:border-[#9caf88] hover:bg-[#9caf88]/10"
                       : "border-[#d8e2e8] hover:border-[#a3bcc9] hover:bg-[#a3bcc9]/15"
@@ -907,7 +931,7 @@ export default function Home() {
               />
               <button
                 type="submit"
-                disabled={!input.trim()}
+                disabled={!input.trim() || isBotTyping}
                 className="shrink-0 rounded-2xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-5"
               >
                 보내기
