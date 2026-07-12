@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
 import { getFallbackReply } from "@/lib/healing-bot";
+import { RootStrengthenMode } from "@/components/RootStrengthenMode";
 import { recordMoodEntry } from "@/lib/mood-log";
+import { getRootState, type RootState } from "@/lib/root-strength";
 import { detectSentiment, type Sentiment } from "@/lib/sentiment";
 
 const MAX_HP = 100;
@@ -250,6 +252,8 @@ export default function Home() {
   const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
   const [wiltedByNegative, setWiltedByNegative] = useState(false);
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const [showRootMode, setShowRootMode] = useState(false);
+  const [rootState, setRootState] = useState<RootState>({ level: 0, hp: 0 });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -263,6 +267,10 @@ export default function Home() {
   useEffect(() => {
     saveDayMessages(formatDateKey(new Date()), messages);
   }, [messages]);
+
+  useEffect(() => {
+    setRootState(getRootState());
+  }, []);
 
   useEffect(() => {
     const audio = new Audio("/sounds/pop11.mp3");
@@ -839,13 +847,47 @@ export default function Home() {
                 ? "긍정의 말 한마디가 씨앗을 깨워요 · 씨앗을 터치해 물도 줄 수 있어요"
                 : "긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요"}
             </p>
+
+            {!isSeedStage && (
+              <button
+                type="button"
+                onClick={() => setShowRootMode(true)}
+                className="mt-3 mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#b8c9a8] bg-gradient-to-b from-[#eef4e8] to-[#dce8d4] px-4 py-3 text-sm font-semibold text-[#4a5a3c] shadow-sm transition hover:from-[#e4eedc] hover:to-[#d0e0c8] active:scale-[0.98]"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-5 w-5 text-[#6d8a5e]"
+                  aria-hidden
+                >
+                  <path
+                    d="M12 4v6M8 14c0-2 1.8-4 4-4s4 2 4 4v2H8v-2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M6 18c2 2 10 2 12 0"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                뿌리 강화 모드
+                {(rootState.level > 0 || rootState.hp > 0) && (
+                  <span className="rounded-full bg-[#6d8a5e]/15 px-2 py-0.5 text-[11px] font-bold text-[#6d8a5e]">
+                    Lv.{rootState.level}
+                  </span>
+                )}
+              </button>
+            )}
           </main>
 
           {/* ── 하단: 채팅창 ── */}
-          <footer className="shrink-0 overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md">
+          <footer className="mt-2 shrink-0 overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md sm:mt-3">
             <div className="border-b border-[#ede8df] bg-gradient-to-r from-[#f5f0e8]/80 to-white/60 px-4 py-3">
               <p className="text-sm font-semibold text-[#4a5248]">
-                마음 쓰레기통
+                마음 기록장
               </p>
               <p className="mt-0.5 text-xs text-[#8ba4b4]">
                 긍정의 말 → 성장 · 부정의 말 → 받아줄게요
@@ -940,6 +982,13 @@ export default function Home() {
           </footer>
         </div>
       </div>
+
+      {showRootMode && (
+        <RootStrengthenMode
+          onClose={() => setShowRootMode(false)}
+          onRootStateChange={setRootState}
+        />
+      )}
     </>
   );
 }
