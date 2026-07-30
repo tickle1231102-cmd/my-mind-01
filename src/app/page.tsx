@@ -7,9 +7,20 @@ import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
 import { getFallbackReply } from "@/lib/healing-bot";
 import { RootStrengthenMode } from "@/components/RootStrengthenMode";
 import { SproutCharacter } from "@/components/SproutCharacter";
+import { WateringCan } from "@/components/WateringCan";
 import { recordMoodEntry } from "@/lib/mood-log";
+import {
+  BUBBLE_VISIBLE_MS,
+  nextBubbleDelayMs,
+  pickPotBubble,
+} from "@/lib/pot-bubbles";
 import { getRootState, type RootState } from "@/lib/root-strength";
-import { detectSentiment, type Sentiment } from "@/lib/sentiment";
+import {
+  detectPlantMood,
+  detectSentiment,
+  type PlantMood,
+  type Sentiment,
+} from "@/lib/sentiment";
 
 const MAX_HP = 100;
 const HP_GAIN = 15;
@@ -32,6 +43,7 @@ function randomOf<T>(arr: T[]): T {
 
 const POT_NAME_KEY = "healing-garden-pot-name";
 const POT_TOUCH_GUIDE_KEY = "healing-garden-pot-touch-guide";
+const ROOT_GUIDE_KEY = "healing-garden-root-guide";
 const MAX_POT_NAME_LENGTH = 10;
 
 /** 이름 뒤에 을/를 조사 붙이기 */
@@ -97,7 +109,7 @@ const QUICK_HINTS = ["오늘도 고생했어", "힘들어", "감사해", "행복
 const QUICK_EMOJIS: { emoji: string; tone: "positive" | "negative" }[] = [
   { emoji: "😊", tone: "positive" },
   { emoji: "🙂", tone: "positive" },
-  { emoji: "😚", tone: "positive" },
+  { emoji: "🥰", tone: "positive" },
   { emoji: "😭", tone: "negative" },
   { emoji: "😡", tone: "negative" },
 ];
@@ -249,6 +261,9 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [nextId, setNextId] = useState(1);
   const [plantFx, setPlantFx] = useState<PlantFx>("float");
+  const [plantMood, setPlantMood] = useState<PlantMood>("none");
+  const [moodPulse, setMoodPulse] = useState(0);
+  const plantMoodTimerRef = useRef<number | null>(null);
   const [hpGlow, setHpGlow] = useState<"none" | "up" | "down">("none");
   const [watering, setWatering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -264,6 +279,9 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showPotTouchGuide, setShowPotTouchGuide] = useState(false);
   const [potGuideLeaving, setPotGuideLeaving] = useState(false);
+  const [showRootGuide, setShowRootGuide] = useState(false);
+  const [potBubble, setPotBubble] = useState<string | null>(null);
+  const [potBubbleLeaving, setPotBubbleLeaving] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -272,10 +290,25 @@ export default function Home() {
   const bgmRef = useRef<HTMLAudioElement | null>(null);
   const bgmEnabledRef = useRef(true);
   const wateringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const potBubbleTextRef = useRef<string | null>(null);
+  const potBubbleHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const potBubbleScheduleRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isBotTyping]);
+
+  useEffect(() => {
+    return () => {
+      if (plantMoodTimerRef.current) {
+        window.clearTimeout(plantMoodTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     saveDayMessages(formatDateKey(new Date()), messages);
@@ -302,6 +335,70 @@ export default function Home() {
     const id = window.setTimeout(() => nameInputRef.current?.focus(), 180);
     return () => window.clearTimeout(id);
   }, [showWelcome]);
+
+  useEffect(() => {
+    const paused =
+      showWelcome || showPotTouchGuide || showRootMode || showRootGuide;
+    if (paused) {
+      if (potBubbleScheduleRef.current) {
+        clearTimeout(potBubbleScheduleRef.current);
+        potBubbleScheduleRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    const hideBubble = () => {
+      setPotBubbleLeaving(true);
+      if (potBubbleHideTimerRef.current) {
+        clearTimeout(potBubbleHideTimerRef.current);
+      }
+      potBubbleHideTimerRef.current = setTimeout(() => {
+        setPotBubble(null);
+        setPotBubbleLeaving(false);
+        potBubbleTextRef.current = null;
+        potBubbleHideTimerRef.current = null;
+      }, 320);
+    };
+
+    const showBubble = () => {
+      if (cancelled) return;
+      const next = pickPotBubble(potName, potBubbleTextRef.current);
+      potBubbleTextRef.current = next.text;
+      setPotBubbleLeaving(false);
+      setPotBubble(next.text);
+      if (potBubbleHideTimerRef.current) {
+        clearTimeout(potBubbleHideTimerRef.current);
+      }
+      potBubbleHideTimerRef.current = setTimeout(hideBubble, BUBBLE_VISIBLE_MS);
+    };
+
+    const scheduleNext = (delay: number) => {
+      if (potBubbleScheduleRef.current) {
+        clearTimeout(potBubbleScheduleRef.current);
+      }
+      potBubbleScheduleRef.current = setTimeout(() => {
+        showBubble();
+        scheduleNext(nextBubbleDelayMs());
+      }, delay);
+    };
+
+    // 첫 말풍선은 조금 빨리, 이후는 랜덤 간격
+    scheduleNext(6000 + Math.floor(Math.random() * 4000));
+
+    return () => {
+      cancelled = true;
+      if (potBubbleScheduleRef.current) {
+        clearTimeout(potBubbleScheduleRef.current);
+        potBubbleScheduleRef.current = null;
+      }
+      if (potBubbleHideTimerRef.current) {
+        clearTimeout(potBubbleHideTimerRef.current);
+        potBubbleHideTimerRef.current = null;
+      }
+    };
+  }, [showWelcome, showPotTouchGuide, showRootMode, showRootGuide, potName]);
 
   useEffect(() => {
     const audio = new Audio("/sounds/pop11.mp3");
@@ -380,6 +477,19 @@ export default function Home() {
     }, 1300);
   }
 
+  function maybeShowRootGuide(reachedLevel: number) {
+    if (reachedLevel !== 1) return;
+    if (window.localStorage.getItem(ROOT_GUIDE_KEY) === "done") return;
+    // 레벨업 연출이 끝난 뒤 안내창 표시
+    window.setTimeout(() => setShowRootGuide(true), 700);
+  }
+
+  function dismissRootGuide(openRootMode = false) {
+    window.localStorage.setItem(ROOT_GUIDE_KEY, "done");
+    setShowRootGuide(false);
+    if (openRootMode) setShowRootMode(true);
+  }
+
   function applyHpGain(gain: number, plantFxKind?: PlantFx) {
     let newHp = Math.min(MAX_HP, hp + gain);
     let newLevel = level;
@@ -394,6 +504,7 @@ export default function Home() {
       triggerWatering();
       flashHpGlow("up");
       playFx("bloom");
+      maybeShowRootGuide(newLevel);
     } else if (hpIncreased) {
       setWiltedByNegative(false);
       triggerWatering();
@@ -425,6 +536,20 @@ export default function Home() {
     setPlantFx(kind);
     const ms = kind === "shake" || kind === "wilt" ? 600 : 700;
     setTimeout(() => setPlantFx("float"), ms);
+  }
+
+  function playMood(kind: PlantMood) {
+    if (kind === "none") return;
+    if (plantMoodTimerRef.current) {
+      window.clearTimeout(plantMoodTimerRef.current);
+    }
+    setPlantMood(kind);
+    setMoodPulse((n) => n + 1);
+    const ms = kind === "love" ? 1600 : 1800;
+    plantMoodTimerRef.current = window.setTimeout(() => {
+      setPlantMood("none");
+      plantMoodTimerRef.current = null;
+    }, ms);
   }
 
   function flashHpGlow(dir: "up" | "down") {
@@ -495,6 +620,17 @@ export default function Home() {
       setHp(newHp);
     }
 
+    const mood = detectPlantMood(text);
+    if (mood !== "none") {
+      playMood(mood);
+      if (mood === "love" && tone === "positive") {
+        playFx("bloom");
+      }
+    } else if (tone === "negative") {
+      // 명시적 마커가 없어도 부정 톤이면 공감 눈물
+      playMood("cry");
+    }
+
     setMessages((prev) => [...prev, userMsg]);
     setNextId(id);
     setIsBotTyping(true);
@@ -544,8 +680,8 @@ export default function Home() {
 
   function sendEmoji(emoji: string, tone: "positive" | "negative") {
     if (isBotTyping) return;
+    // 모바일에서 input focus 시 화면 확대되는 것을 막기 위해 포커스하지 않음
     void dispatchUserMessage(emoji, tone);
-    inputRef.current?.focus();
   }
 
   const hpPercent = Math.round((hp / MAX_HP) * 100);
@@ -594,29 +730,6 @@ export default function Home() {
         .plant-wilt { animation: heal-wilt 0.6s ease-in forwards; }
         .hp-glow-up { box-shadow: 0 0 18px 4px rgba(156, 175, 136, 0.45); }
         .hp-glow-down { box-shadow: 0 0 18px 4px rgba(232, 165, 152, 0.5); }
-        @keyframes water-can-pour {
-          0% { opacity: 0; transform: translate(18px, -28px) rotate(-12deg) scale(0.65); }
-          18% { opacity: 1; transform: translate(10px, -16px) rotate(-32deg) scale(0.88); }
-          45% { opacity: 1; transform: translate(2px, -8px) rotate(-50deg) scale(1); }
-          75% { opacity: 1; transform: translate(2px, -8px) rotate(-50deg) scale(1); }
-          100% { opacity: 0; transform: translate(-2px, -2px) rotate(-36deg) scale(0.9); }
-        }
-        @keyframes water-stream {
-          0% { opacity: 0; height: 0; }
-          25% { opacity: 0.85; height: 18px; }
-          70% { opacity: 0.55; height: 34px; }
-          100% { opacity: 0; height: 42px; }
-        }
-        @keyframes water-drop {
-          0% { opacity: 0; transform: translateY(0) scale(0.7); }
-          20% { opacity: 0.9; }
-          100% { opacity: 0; transform: translateY(22px) scale(1); }
-        }
-        .water-can-pour { animation: water-can-pour 1.2s ease-in-out forwards; }
-        .water-stream { animation: water-stream 1s ease-in forwards; }
-        .water-drop { animation: water-drop 0.9s ease-in forwards; }
-        .water-drop-delay { animation-delay: 0.15s; }
-        .water-drop-delay-2 { animation-delay: 0.28s; }
         @keyframes touch-guide-in {
           0% { opacity: 0; transform: translateY(8px); }
           100% { opacity: 1; transform: translateY(0); }
@@ -643,6 +756,16 @@ export default function Home() {
         .touch-hand-tap { animation: touch-hand-tap 1.35s ease-in-out infinite; }
         .touch-ripple { animation: touch-ripple 1.35s ease-out infinite; }
         .pot-guide-pulse { animation: pot-guide-pulse 1.6s ease-out infinite; border-radius: 9999px; }
+        @keyframes pot-bubble-in {
+          0% { opacity: 0; transform: translateY(8px) scale(0.92); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes pot-bubble-out {
+          0% { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-4px) scale(0.96); }
+        }
+        .pot-bubble-enter { animation: pot-bubble-in 0.35s ease-out both; }
+        .pot-bubble-leave { animation: pot-bubble-out 0.3s ease-in both; }
       `}</style>
 
       <div className="relative flex min-h-dvh flex-col bg-[#FDFBF7]">
@@ -685,7 +808,7 @@ export default function Home() {
                   }
                   maxLength={MAX_POT_NAME_LENGTH}
                   placeholder="예: 몽실이, 햇살"
-                  className="w-full rounded-2xl border border-[#e8e0d4] bg-white px-4 py-3 text-sm text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25"
+                  className="w-full rounded-2xl border border-[#e8e0d4] bg-white px-4 py-3 text-base text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25"
                   autoComplete="off"
                 />
                 <p className="text-right text-[11px] text-[#8ba4b4]">
@@ -699,6 +822,88 @@ export default function Home() {
                   정원 시작하기
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+
+        {showRootGuide && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#4a5248]/35 px-5 backdrop-blur-[3px]">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="root-guide-title"
+              className="touch-guide-enter w-full max-w-sm rounded-3xl border border-[#e8e0d4] bg-[#FDFBF7] p-6 shadow-xl"
+            >
+              <p className="text-[11px] font-semibold tracking-[0.2em] text-[#6d8a5e]">
+                LEVEL UP · ROOT MODE
+              </p>
+              <h2
+                id="root-guide-title"
+                className="mt-1 text-xl font-bold text-[#4a5248]"
+              >
+                레벨 1 달성! 뿌리를 키워볼까요?
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-[#6d655c]">
+                씨앗이 싹을 틔웠어요. 이제{" "}
+                <span className="font-semibold text-[#6d8a5e]">
+                  뿌리 강화 모드
+                </span>
+                를 쓸 수 있어요.
+              </p>
+
+              <ul className="mt-4 space-y-2.5 rounded-2xl border border-[#e8dcc8] bg-white/70 px-4 py-3.5 text-sm leading-relaxed text-[#4a5248]">
+                <li className="flex gap-2">
+                  <span className="mt-0.5 shrink-0 text-[#6d8a5e]" aria-hidden>
+                    ①
+                  </span>
+                  <span>
+                    오늘 아쉬웠던 일을 한 줄 적으면, 뿌리가 그 아래로
+                    내려가요.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-0.5 shrink-0 text-[#6d8a5e]" aria-hidden>
+                    ②
+                  </span>
+                  <span>
+                    그럼에도 감사하거나 배운 점을 적으면 뿌리가 더
+                    단단해져요.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="mt-0.5 shrink-0 text-[#6d8a5e]" aria-hidden>
+                    ③
+                  </span>
+                  <span>
+                    뿌리가 강할수록 시련의 바람에도 덜 흔들려요.
+                  </span>
+                </li>
+              </ul>
+
+              <p className="mt-3 text-xs leading-relaxed text-[#8ba4b4]">
+                화면 가운데{" "}
+                <span className="font-semibold text-[#6d8a5e]">
+                  뿌리 강화 모드
+                </span>{" "}
+                버튼으로 언제든 다시 들어갈 수 있어요.
+              </p>
+
+              <div className="mt-5 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => dismissRootGuide(true)}
+                  className="w-full rounded-2xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-[0.98]"
+                >
+                  뿌리 강화하러 가기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => dismissRootGuide(false)}
+                  className="w-full rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-3 text-sm font-medium text-[#6d655c] transition hover:bg-white active:scale-[0.98]"
+                >
+                  나중에 할게요
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -983,26 +1188,12 @@ export default function Home() {
                 <div className="relative flex justify-center">
                   {watering && (
                     <div
-                      className={`pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 ${
-                        isSeedStage ? "-top-10 sm:-top-12" : "-top-8 sm:-top-9"
+                      className={`pointer-events-none absolute left-1/2 z-10 -translate-x-[40%] ${
+                        isSeedStage ? "-top-12 sm:-top-14" : "-top-10 sm:-top-12"
                       }`}
                       aria-hidden
                     >
-                      <div className="water-can-pour relative">
-                        <Image
-                          src="/watering-can.png"
-                          alt=""
-                          width={256}
-                          height={256}
-                          className="h-10 w-10 drop-shadow-md sm:h-12 sm:w-12"
-                        />
-                        <div className="absolute left-1.5 top-[2.1rem] flex flex-col items-center sm:left-2 sm:top-[2.55rem]">
-                          <div className="water-stream w-0.5 rounded-full bg-[#8ec5e8]/80" />
-                          <span className="water-drop mt-0.5 block h-1 w-1 rounded-full bg-[#8ec5e8]" />
-                          <span className="water-drop water-drop-delay mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#a3d4f0]" />
-                          <span className="water-drop water-drop-delay-2 mt-0.5 block h-0.5 w-0.5 rounded-full bg-[#b8dff7]" />
-                        </div>
-                      </div>
+                      <WateringCan />
                     </div>
                   )}
 
@@ -1028,6 +1219,35 @@ export default function Home() {
                     </div>
                   )}
 
+                  {(potBubble || potBubbleLeaving) &&
+                    !showPotTouchGuide &&
+                    !potGuideLeaving && (
+                      <div
+                        className={`pointer-events-none absolute left-1/2 z-20 w-[min(15.5rem,78vw)] -translate-x-1/2 ${
+                          isSeedStage
+                            ? "-top-12 sm:-top-14"
+                            : "-top-[4.25rem] sm:-top-[4.75rem]"
+                        } ${potBubbleLeaving ? "pot-bubble-leave" : "pot-bubble-enter"}`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div className="relative rounded-2xl border border-[#e8dcc8] bg-white/95 px-3.5 py-2.5 text-center shadow-md backdrop-blur-sm">
+                          {potName && (
+                            <p className="mb-0.5 text-[10px] font-semibold tracking-wide text-[#8ba4b4]">
+                              {potName}
+                            </p>
+                          )}
+                          <p className="text-[13px] leading-snug font-medium text-[#4a5248] sm:text-sm">
+                            {potBubble}
+                          </p>
+                          <span
+                            className="absolute left-1/2 top-full -mt-px h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-r border-b border-[#e8dcc8] bg-white/95"
+                            aria-hidden
+                          />
+                        </div>
+                      </div>
+                    )}
+
                   <button
                     type="button"
                     onClick={handlePotClick}
@@ -1046,6 +1266,8 @@ export default function Home() {
                       level={level}
                       fx={plantFx}
                       wilted={isWiltedLook}
+                      mood={plantMood}
+                      moodPulse={moodPulse}
                     />
                   </button>
                 </div>
@@ -1186,7 +1408,7 @@ export default function Home() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="지금 마음을 적어 보세요…"
-                className="min-w-0 flex-1 rounded-2xl border border-[#e8e0d4] bg-[#FDFBF7] px-4 py-3 text-sm text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25"
+                className="min-w-0 flex-1 rounded-2xl border border-[#e8e0d4] bg-[#FDFBF7] px-4 py-3 text-base text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25"
                 aria-label="메시지 입력"
               />
               <button

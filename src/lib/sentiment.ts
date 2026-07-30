@@ -97,7 +97,41 @@ export const NEGATIVE_WORDS = [
 
 const ANGRY_MARKERS = ["화나", "짜증", "분노", "미워", "싫", "열받", "angry", "hate", "😡"];
 const ANXIOUS_MARKERS = ["불안", "걱정", "무서", "두려", "스트레스", "stress", "anxious"];
-const LOVE_MARKERS = ["사랑", "감사", "고마", "소중", "😚", "love", "thanks"];
+const LOVE_MARKERS = [
+  "사랑",
+  "사랑해",
+  "좋아해",
+  "고마워",
+  "감사",
+  "고마",
+  "소중",
+  "🥰",
+  "love",
+  "luv",
+  "thanks",
+];
+const CRY_MARKERS = [
+  "😭",
+  "😢",
+  "슬프",
+  "슬픔",
+  "우울",
+  "눈물",
+  "울고",
+  "울어",
+  "울었",
+  "외로",
+  "서러",
+  "속상",
+  "서운",
+  "마음이 무거",
+  "힘들",
+  "cry",
+  "sad",
+  "lonely",
+  "depress",
+  "tear",
+];
 
 export function detectSentiment(text: string): Sentiment {
   const t = text.toLowerCase();
@@ -121,4 +155,19 @@ export function hasAnxiousSignal(text: string): boolean {
 export function hasLoveSignal(text: string): boolean {
   const t = text.toLowerCase();
   return LOVE_MARKERS.some((w) => t.includes(w));
+}
+
+export function hasCrySignal(text: string): boolean {
+  const t = text.toLowerCase();
+  return CRY_MARKERS.some((w) => t.includes(w));
+}
+
+/** 화분 표정 연출용 — love > angry > cry */
+export type PlantMood = "none" | "cry" | "angry" | "love";
+
+export function detectPlantMood(text: string): PlantMood {
+  if (hasLoveSignal(text)) return "love";
+  if (hasAngrySignal(text)) return "angry";
+  if (hasCrySignal(text)) return "cry";
+  return "none";
 }

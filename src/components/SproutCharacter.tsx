@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { PlantMood } from "@/lib/sentiment";
 
 export type SproutFx = "float" | "shake" | "bloom" | "wilt";
 
@@ -8,6 +9,9 @@ type SproutCharacterProps = {
   level: number;
   fx?: SproutFx;
   wilted?: boolean;
+  mood?: PlantMood;
+  /** 같은 mood를 연속 재생할 때 하트/눈물 애니메이션 리셋용 */
+  moodPulse?: number;
   className?: string;
 };
 
@@ -19,6 +23,8 @@ export function SproutCharacter({
   level,
   fx = "float",
   wilted = false,
+  mood = "none",
+  moodPulse = 0,
   className = "",
 }: SproutCharacterProps) {
   const stage = Math.max(0, Math.min(level, 5));
@@ -45,15 +51,25 @@ export function SproutCharacter({
           : "sprout-fx-float";
 
   const toneClass = wilted ? "sprout-tone-wilt" : "";
+  const moodClass =
+    mood === "cry"
+      ? "sprout-mood-cry"
+      : mood === "angry"
+        ? "sprout-mood-angry"
+        : mood === "love"
+          ? "sprout-mood-love"
+          : "";
 
   return (
     <div
-      className={`sprout-character ${fxClass} ${toneClass} ${growing ? "sprout-growing" : ""} ${className}`}
+      className={`sprout-character ${fxClass} ${toneClass} ${moodClass} ${growing ? "sprout-growing" : ""} ${className}`}
       data-stage={stage}
+      data-mood={mood}
       aria-hidden
     >
       <style>{`
         .sprout-character {
+          position: relative;
           width: 5.75rem;
           height: 7rem;
           display: flex;
@@ -102,16 +118,20 @@ export function SproutCharacter({
         .sc-leaf-l2, .sc-leaf-r2,
         .sc-leaf-top { opacity: 0; transform: scale(0.15); }
         .sc-bud-g, .sc-flower-g, .sc-fruit-g { opacity: 0; transform: scale(0.12); }
+        .sc-head-face { opacity: 0; transform: scale(0.2); transform-box: fill-box; transform-origin: center center; transition: transform 0.65s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.45s ease; }
+        .sc-bud-face, .sc-flower-face { opacity: 0; }
 
         .sprout-character[data-stage="1"] .sc-stem-g { transform: scaleY(0.55); opacity: 1; }
         .sprout-character[data-stage="1"] .sc-leaf-l1,
         .sprout-character[data-stage="1"] .sc-leaf-r1 { opacity: 1; transform: scale(0.88); }
+        .sprout-character[data-stage="1"] .sc-head-face { opacity: 1; transform: scale(0.92) translateY(4px); }
 
         .sprout-character[data-stage="2"] .sc-stem-g { transform: scaleY(0.72); opacity: 1; }
         .sprout-character[data-stage="2"] .sc-leaf-l1,
         .sprout-character[data-stage="2"] .sc-leaf-r1 { opacity: 1; transform: scale(1); }
         .sprout-character[data-stage="2"] .sc-leaf-l2,
         .sprout-character[data-stage="2"] .sc-leaf-r2 { opacity: 1; transform: scale(0.92); }
+        .sprout-character[data-stage="2"] .sc-head-face { opacity: 1; transform: scale(1) translateY(0); }
 
         .sprout-character[data-stage="3"] .sc-stem-g { transform: scaleY(0.9); opacity: 1; }
         .sprout-character[data-stage="3"] .sc-leaf-l1,
@@ -119,6 +139,7 @@ export function SproutCharacter({
         .sprout-character[data-stage="3"] .sc-leaf-l2,
         .sprout-character[data-stage="3"] .sc-leaf-r2,
         .sprout-character[data-stage="3"] .sc-leaf-top { opacity: 1; transform: scale(1); }
+        .sprout-character[data-stage="3"] .sc-head-face { opacity: 1; transform: scale(1.05) translateY(-2px); }
 
         .sprout-character[data-stage="4"] .sc-stem-g { transform: scaleY(1); opacity: 1; }
         .sprout-character[data-stage="4"] .sc-leaf-l1,
@@ -127,6 +148,8 @@ export function SproutCharacter({
         .sprout-character[data-stage="4"] .sc-leaf-r2,
         .sprout-character[data-stage="4"] .sc-leaf-top { opacity: 1; transform: scale(1); }
         .sprout-character[data-stage="4"] .sc-bud-g { opacity: 1; transform: scale(1); }
+        .sprout-character[data-stage="4"] .sc-bud-face { opacity: 1; }
+        .sprout-character[data-stage="4"] .sc-head-face { opacity: 0; transform: scale(0.2); }
 
         .sprout-character[data-stage="5"] .sc-stem-g { transform: scaleY(1); opacity: 1; }
         .sprout-character[data-stage="5"] .sc-leaf-l1,
@@ -137,6 +160,91 @@ export function SproutCharacter({
         .sprout-character[data-stage="5"] .sc-bud-g { opacity: 0; transform: scale(0.2); }
         .sprout-character[data-stage="5"] .sc-flower-g { opacity: 1; transform: scale(1); }
         .sprout-character[data-stage="5"] .sc-fruit-g { opacity: 1; transform: scale(1); }
+        .sprout-character[data-stage="5"] .sc-flower-face { opacity: 1; }
+        .sprout-character[data-stage="5"] .sc-head-face { opacity: 0; transform: scale(0.2); }
+
+        /* mouths / brows / tears — default */
+        .sc-mouth-sad, .sc-mouth-angry, .sc-brows, .sc-tears { display: none; }
+        .sprout-tone-wilt .sc-mouth-happy { display: none; }
+        .sprout-tone-wilt .sc-mouth-sad { display: block; }
+
+        /* cry mood */
+        .sprout-mood-cry .sc-mouth-happy { display: none; }
+        .sprout-mood-cry .sc-mouth-angry { display: none; }
+        .sprout-mood-cry .sc-mouth-sad { display: block; }
+        .sprout-mood-cry .sc-brows { display: none; }
+        .sprout-mood-cry .sc-tears { display: block; }
+
+        /* angry mood */
+        .sprout-mood-angry .sc-mouth-happy { display: none; }
+        .sprout-mood-angry .sc-mouth-sad { display: none; }
+        .sprout-mood-angry .sc-mouth-angry { display: block; }
+        .sprout-mood-angry .sc-brows { display: block; }
+        .sprout-mood-angry .sc-tears { display: none; }
+
+        /* love mood keeps smile */
+        .sprout-mood-love .sc-mouth-sad { display: none; }
+        .sprout-mood-love .sc-mouth-angry { display: none; }
+        .sprout-mood-love .sc-mouth-happy { display: block; }
+        .sprout-mood-love .sc-brows { display: none; }
+        .sprout-mood-love .sc-tears { display: none; }
+
+        @keyframes sprout-tear-fall {
+          0% { opacity: 0; transform: translateY(0); }
+          15% { opacity: 0.95; }
+          100% { opacity: 0; transform: translateY(10px); }
+        }
+        .sc-tear {
+          transform-box: fill-box;
+          transform-origin: center top;
+          animation: sprout-tear-fall 0.9s ease-in infinite;
+        }
+        .sc-tear-delay { animation-delay: 0.35s; }
+
+        @keyframes sprout-heart-float {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, 6px) scale(0.45);
+          }
+          /* 처음부터 위로 움직이게 — 페이드인만 하면 정지처럼 보임 */
+          10% {
+            opacity: 1;
+            transform: translate(calc(-50% + var(--hx, 0px) * 0.2), -2px) scale(0.78);
+          }
+          55% {
+            opacity: 1;
+            transform: translate(calc(-50% + var(--hx, 0px) * 0.7), -28px) scale(1.05);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(calc(-50% + var(--hx, 0px)), -48px) scale(1.12);
+          }
+        }
+        .sc-hearts-overlay {
+          pointer-events: none;
+          position: absolute;
+          inset: 0;
+          z-index: 3;
+          overflow: visible;
+        }
+        .sc-hearts-overlay span {
+          position: absolute;
+          left: 50%;
+          bottom: 55%;
+          font-size: 0.85rem;
+          line-height: 1;
+          color: #e8899a;
+          opacity: 0;
+          filter: drop-shadow(0 1px 2px rgba(180, 80, 100, 0.25));
+          animation: sprout-heart-float 1.15s cubic-bezier(0.2, 0.75, 0.25, 1) both;
+          will-change: transform, opacity;
+        }
+        .sprout-character[data-stage="0"] .sc-hearts-overlay span { bottom: 40%; }
+        .sc-hearts-overlay .h1 { --hx: -18px; animation-delay: 0s; }
+        .sc-hearts-overlay .h2 { --hx: 14px; animation-delay: 0.1s; font-size: 0.7rem; color: #f2a3b0; }
+        .sc-hearts-overlay .h3 { --hx: 2px; animation-delay: 0.2s; font-size: 1rem; color: #de6d84; }
+        .sc-hearts-overlay .h4 { --hx: -12px; animation-delay: 0.32s; font-size: 0.65rem; }
+        .sc-hearts-overlay .h5 { --hx: 18px; animation-delay: 0.42s; font-size: 0.75rem; color: #f0b4be; }
 
         @keyframes sprout-float {
           0%, 100% { transform: translateY(0) rotate(-1.2deg); }
@@ -180,7 +288,18 @@ export function SproutCharacter({
         .sprout-growing { animation: sprout-grow-pop 0.9s cubic-bezier(0.34, 1.4, 0.64, 1); }
         .sprout-growing .sc-sparkle { animation: sprout-sparkle 0.9s ease-out both; }
         .sc-blink { transform-origin: center; animation: sprout-blink 4.5s ease-in-out infinite; }
+        .sprout-mood-angry .sc-blink { animation: none; }
       `}</style>
+
+      {mood === "love" && (
+        <div className="sc-hearts-overlay" key={`hearts-${moodPulse}`}>
+          <span className="h1">♥</span>
+          <span className="h2">♥</span>
+          <span className="h3">♥</span>
+          <span className="h4">♥</span>
+          <span className="h5">♥</span>
+        </div>
+      )}
 
       <svg
         className="sprout-svg"
@@ -211,16 +330,38 @@ export function SproutCharacter({
             opacity="0.5"
           />
           <ellipse cx="41" cy="45" rx="6.5" ry="4" fill="#fff" opacity="0.35" />
-          <ellipse className="sc-blink" cx="41.5" cy="54" rx="2.3" ry="2.8" fill="#5a4638" />
-          <ellipse className="sc-blink" cx="58.5" cy="54" rx="2.3" ry="2.8" fill="#5a4638" />
+          <path className="sc-brows" d="M36 48l7 3.2" stroke="#5a4638" strokeWidth="1.7" strokeLinecap="round" />
+          <path className="sc-brows" d="M64 48l-7 3.2" stroke="#5a4638" strokeWidth="1.7" strokeLinecap="round" />
+          <ellipse className="sc-blink" cx="41.5" cy="54" rx="2.6" ry="3.1" fill="#5a4638" />
+          <ellipse className="sc-blink" cx="58.5" cy="54" rx="2.6" ry="3.1" fill="#5a4638" />
           <path
-            d="M44.5 62c2.2 2.6 8.8 2.6 11 0"
+            className="sc-mouth-happy"
+            d="M44.5 62c2.2 2.8 8.8 2.8 11 0"
+            stroke="#5a4638"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <path
+            className="sc-mouth-sad"
+            d="M45.5 64c2-2.2 7-2.2 9 0"
+            stroke="#5a4638"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <path
+            className="sc-mouth-angry"
+            d="M45 63.5c1.2 0 2-.8 2.8-.8s1.6.8 2.7.8 1.8-.8 2.7-.8 1.7.8 2.8.8"
             stroke="#5a4638"
             strokeWidth="1.7"
             strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          <circle cx="35" cy="58" r="2.3" fill="#e8a598" opacity="0.75" />
-          <circle cx="65" cy="58" r="2.3" fill="#e8a598" opacity="0.75" />
+          <g className="sc-tears">
+            <ellipse className="sc-tear" cx="37.5" cy="60" rx="1.7" ry="2.4" fill="#7eb8d4" />
+            <ellipse className="sc-tear sc-tear-delay" cx="62.5" cy="60" rx="1.7" ry="2.4" fill="#7eb8d4" />
+          </g>
+          <circle cx="35" cy="58" r="2.6" fill="#e8a598" opacity="0.85" />
+          <circle cx="65" cy="58" r="2.6" fill="#e8a598" opacity="0.85" />
         </g>
 
         {/* Lv1+ 식물 */}
@@ -298,10 +439,82 @@ export function SproutCharacter({
             />
           </g>
 
+          {/* Lv1~3: 줄기 위 머리 + 얼굴 */}
+          <g className="sc-crown-g sc-head-face">
+            <ellipse cx="50" cy="30" rx="10" ry="9.5" fill="#c5d6b0" />
+            <ellipse cx="50" cy="29" rx="8" ry="7" fill="#d4e4c4" opacity="0.55" />
+            <path className="sc-brows" d="M41.5 25.5l5 2.2" stroke="#5a4638" strokeWidth="1.25" strokeLinecap="round" />
+            <path className="sc-brows" d="M58.5 25.5l-5 2.2" stroke="#5a4638" strokeWidth="1.25" strokeLinecap="round" />
+            <ellipse className="sc-blink" cx="45.5" cy="29.5" rx="1.7" ry="2.1" fill="#5a4638" />
+            <ellipse className="sc-blink" cx="54.5" cy="29.5" rx="1.7" ry="2.1" fill="#5a4638" />
+            <path
+              className="sc-mouth-happy"
+              d="M46.5 34c1.5 2 5.5 2 7 0"
+              stroke="#5a4638"
+              strokeWidth="1.35"
+              strokeLinecap="round"
+            />
+            <path
+              className="sc-mouth-sad"
+              d="M47.2 35.5c1.3-1.6 4.3-1.6 5.6 0"
+              stroke="#5a4638"
+              strokeWidth="1.35"
+              strokeLinecap="round"
+            />
+            <path
+              className="sc-mouth-angry"
+              d="M47 34.8c.8 0 1.3-.55 1.9-.55s1.1.55 1.8.55 1.2-.55 1.8-.55 1.15.55 1.9.55"
+              stroke="#5a4638"
+              strokeWidth="1.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <g className="sc-tears">
+              <ellipse className="sc-tear" cx="42.2" cy="33.5" rx="1.15" ry="1.7" fill="#7eb8d4" />
+              <ellipse className="sc-tear sc-tear-delay" cx="57.8" cy="33.5" rx="1.15" ry="1.7" fill="#7eb8d4" />
+            </g>
+            <circle cx="41.5" cy="32.5" r="1.8" fill="#e8a598" opacity="0.85" />
+            <circle cx="58.5" cy="32.5" r="1.8" fill="#e8a598" opacity="0.85" />
+          </g>
+
           <g className="sc-crown-g sc-bud-g">
-            <ellipse cx="50" cy="26" rx="7.5" ry="9.5" fill="#e8a598" />
-            <ellipse cx="50" cy="23.5" rx="4.2" ry="5.2" fill="#f0b8ac" opacity="0.85" />
-            <path d="M50 17.5v6" stroke="#7a9168" strokeWidth="1.6" strokeLinecap="round" />
+            <ellipse cx="50" cy="26" rx="8.5" ry="10.5" fill="#e8a598" />
+            <ellipse cx="50" cy="23.5" rx="5" ry="6" fill="#f0b8ac" opacity="0.85" />
+            <path d="M50 16.5v5" stroke="#7a9168" strokeWidth="1.6" strokeLinecap="round" />
+            <g className="sc-bud-face">
+              <path className="sc-brows" d="M42.5 22.8l4.2 1.8" stroke="#5a4638" strokeWidth="1.15" strokeLinecap="round" />
+              <path className="sc-brows" d="M57.5 22.8l-4.2 1.8" stroke="#5a4638" strokeWidth="1.15" strokeLinecap="round" />
+              <ellipse className="sc-blink" cx="46.2" cy="26.5" rx="1.55" ry="1.9" fill="#5a4638" />
+              <ellipse className="sc-blink" cx="53.8" cy="26.5" rx="1.55" ry="1.9" fill="#5a4638" />
+              <path
+                className="sc-mouth-happy"
+                d="M47 30.5c1.3 1.7 4.7 1.7 6 0"
+                stroke="#5a4638"
+                strokeWidth="1.25"
+                strokeLinecap="round"
+              />
+              <path
+                className="sc-mouth-sad"
+                d="M47.5 31.5c1.2-1.4 4-1.4 5 0"
+                stroke="#5a4638"
+                strokeWidth="1.25"
+                strokeLinecap="round"
+              />
+              <path
+                className="sc-mouth-angry"
+                d="M47.2 30.6c.7 0 1.15-.5 1.7-.5s1 .5 1.65.5 1.05-.5 1.65-.5 1 .5 1.7.5"
+                stroke="#5a4638"
+                strokeWidth="1.15"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <g className="sc-tears">
+                <ellipse className="sc-tear" cx="43.2" cy="30.2" rx="1.05" ry="1.55" fill="#7eb8d4" />
+                <ellipse className="sc-tear sc-tear-delay" cx="56.8" cy="30.2" rx="1.05" ry="1.55" fill="#7eb8d4" />
+              </g>
+              <circle cx="42.5" cy="29" r="1.6" fill="#d4847c" opacity="0.7" />
+              <circle cx="57.5" cy="29" r="1.6" fill="#d4847c" opacity="0.7" />
+            </g>
           </g>
 
           <g className="sc-crown-g sc-flower-g">
@@ -310,15 +523,41 @@ export function SproutCharacter({
             <circle cx="57.5" cy="26" r="5.2" fill="#e8a598" />
             <circle cx="44.5" cy="17.5" r="4.8" fill="#f0b8ac" />
             <circle cx="55.5" cy="17.5" r="4.8" fill="#f0b8ac" />
-            <circle cx="50" cy="23" r="3.4" fill="#f5e6a8" />
-            <ellipse className="sc-blink" cx="47.6" cy="22.8" rx="0.95" ry="1.1" fill="#5a4638" />
-            <ellipse className="sc-blink" cx="52.4" cy="22.8" rx="0.95" ry="1.1" fill="#5a4638" />
-            <path
-              d="M48.4 25.2c1 1.1 2.6 1.1 3.6 0"
-              stroke="#5a4638"
-              strokeWidth="0.85"
-              strokeLinecap="round"
-            />
+            <circle cx="50" cy="23" r="4.2" fill="#f5e6a8" />
+            <g className="sc-flower-face">
+              <path className="sc-brows" d="M44 19.8l3.2 1.4" stroke="#5a4638" strokeWidth="1.05" strokeLinecap="round" />
+              <path className="sc-brows" d="M56 19.8l-3.2 1.4" stroke="#5a4638" strokeWidth="1.05" strokeLinecap="round" />
+              <ellipse className="sc-blink" cx="47" cy="22.5" rx="1.35" ry="1.65" fill="#5a4638" />
+              <ellipse className="sc-blink" cx="53" cy="22.5" rx="1.35" ry="1.65" fill="#5a4638" />
+              <path
+                className="sc-mouth-happy"
+                d="M47.5 25.8c1.1 1.4 3.9 1.4 5 0"
+                stroke="#5a4638"
+                strokeWidth="1.15"
+                strokeLinecap="round"
+              />
+              <path
+                className="sc-mouth-sad"
+                d="M48 26.8c1-1.2 3.2-1.2 4 0"
+                stroke="#5a4638"
+                strokeWidth="1.15"
+                strokeLinecap="round"
+              />
+              <path
+                className="sc-mouth-angry"
+                d="M47.8 25.9c.55 0 .9-.4 1.35-.4s.8.4 1.3.4.85-.4 1.3-.4.85.4 1.35.4"
+                stroke="#5a4638"
+                strokeWidth="1.05"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <g className="sc-tears">
+                <ellipse className="sc-tear" cx="44.5" cy="25.5" rx="0.9" ry="1.3" fill="#7eb8d4" />
+                <ellipse className="sc-tear sc-tear-delay" cx="55.5" cy="25.5" rx="0.9" ry="1.3" fill="#7eb8d4" />
+              </g>
+              <circle cx="44" cy="25" r="1.3" fill="#e8a598" opacity="0.8" />
+              <circle cx="56" cy="25" r="1.3" fill="#e8a598" opacity="0.8" />
+            </g>
           </g>
 
           <g className="sc-crown-g sc-fruit-g">

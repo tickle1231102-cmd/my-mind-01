@@ -11,6 +11,7 @@ import {
   saveRootSession,
   type RootState,
 } from "@/lib/root-strength";
+import { RootCharacter } from "@/components/RootCharacter";
 
 type RootStrengthenModeProps = {
   onClose: () => void;
@@ -112,70 +113,16 @@ export function RootStrengthenMode({
             비가 내려도 뿌리는 더 단단해져요
           </p>
 
-          {/* 지상: 식물 */}
-          <div className="relative mx-auto mt-3 flex h-16 w-full max-w-[200px] items-end justify-center">
-            <div className="absolute inset-x-0 bottom-0 h-px bg-[#b8a894]/80" aria-hidden />
-            <div
-              className={`relative flex flex-col items-center ${gainFlash ? "root-grow" : ""}`}
-            >
-              <div className="h-10 w-1 rounded-full bg-[#6d8a5e]" />
-              <div className="flex gap-3">
-                <span className="h-4 w-5 -rotate-[28deg] rounded-full bg-[#9caf88]/80" />
-                <span className="h-4 w-5 rotate-[28deg] rounded-full bg-[#9caf88]/80" />
-              </div>
-            </div>
-          </div>
-
-          {/* 지하: 뿌리 */}
-          <div className="relative mt-1 h-24 overflow-hidden rounded-b-xl bg-gradient-to-b from-[#c9bfb0]/40 to-[#a89884]">
-            <div
-              className={`root-soil-glow absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(109,138,94,0.25)_0%,_transparent_70%)] ${gainFlash ? "opacity-80" : ""}`}
-              aria-hidden
+          <div className="relative mx-auto mt-2">
+            <RootCharacter
+              level={rootState.level}
+              hpPercent={rootPercent}
+              growing={gainFlash}
             />
-            <svg
-              viewBox="0 0 200 80"
-              className="absolute inset-0 h-full w-full"
-              aria-hidden
-            >
-              <path
-                d="M100 4 C95 20, 88 35, 75 50 C65 62, 50 68, 35 72"
-                fill="none"
-                stroke="#5a6b4a"
-                strokeWidth={Math.max(2, 2 + rootState.level * 0.4)}
-                strokeLinecap="round"
-                opacity={0.5 + rootPercent / 200}
-              />
-              <path
-                d="M100 4 C105 22, 112 38, 125 52 C135 64, 150 70, 168 74"
-                fill="none"
-                stroke="#5a6b4a"
-                strokeWidth={Math.max(2, 2 + rootState.level * 0.4)}
-                strokeLinecap="round"
-                opacity={0.5 + rootPercent / 200}
-              />
-              <path
-                d="M100 4 C100 28, 98 48, 92 68"
-                fill="none"
-                stroke="#4a5a3c"
-                strokeWidth={Math.max(2.5, 2.5 + rootState.level * 0.35)}
-                strokeLinecap="round"
-                opacity={0.6 + rootPercent / 250}
-              />
-              {rootState.level >= 2 && (
-                <path
-                  d="M92 68 C80 72, 68 74, 55 76 M108 68 C120 73, 132 75, 145 77"
-                  fill="none"
-                  stroke="#4a5a3c"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  opacity="0.7"
-                />
-              )}
-            </svg>
           </div>
 
           {/* 뿌리 레벨 */}
-          <div className="mt-3 rounded-xl border border-[#c9bfb0]/60 bg-white/50 px-3 py-2.5 backdrop-blur-sm">
+          <div className="mt-2 rounded-xl border border-[#c9bfb0]/60 bg-white/50 px-3 py-2.5 backdrop-blur-sm">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="font-semibold text-[#5a6b4a]">뿌리 강도</span>
               <span className="tabular-nums font-medium text-[#4a5248]">
@@ -247,7 +194,7 @@ export function RootStrengthenMode({
                   onChange={(e) => setRegret(e.target.value)}
                   placeholder="예: 발표에서 말을 더듬어서 아쉬웠다"
                   rows={4}
-                  className="mt-3 flex-1 resize-none rounded-2xl border border-[#c9bfb0] bg-white/80 px-4 py-3 text-sm text-[#3d352c] outline-none transition placeholder:text-[#b5aea3] focus:border-[#6d8a5e] focus:ring-2 focus:ring-[#6d8a5e]/20"
+                  className="mt-3 flex-1 resize-none rounded-2xl border border-[#c9bfb0] bg-white/80 px-4 py-3 text-base text-[#3d352c] outline-none transition placeholder:text-[#b5aea3] focus:border-[#6d8a5e] focus:ring-2 focus:ring-[#6d8a5e]/20"
                 />
                 <p className="mt-2 text-[11px] text-[#8ba4b4]">
                   완료 시 뿌리 +{ROOT_GAIN_PER_STEP}
@@ -282,7 +229,7 @@ export function RootStrengthenMode({
                   onChange={(e) => setGratitude(e.target.value)}
                   placeholder="예: 그래도 용기 내서 끝까지 말했고, 다음엔 연습하겠다"
                   rows={4}
-                  className="mt-3 flex-1 resize-none rounded-2xl border border-[#c9bfb0] bg-white/80 px-4 py-3 text-sm text-[#3d352c] outline-none transition placeholder:text-[#b5aea3] focus:border-[#6d8a5e] focus:ring-2 focus:ring-[#6d8a5e]/20"
+                  className="mt-3 flex-1 resize-none rounded-2xl border border-[#c9bfb0] bg-white/80 px-4 py-3 text-base text-[#3d352c] outline-none transition placeholder:text-[#b5aea3] focus:border-[#6d8a5e] focus:ring-2 focus:ring-[#6d8a5e]/20"
                 />
                 <p className="mt-2 text-[11px] text-[#8ba4b4]">
                   완료 시 뿌리 +{ROOT_GAIN_PER_STEP} (총 +{ROOT_GAIN_PER_SESSION})
@@ -309,8 +256,12 @@ export function RootStrengthenMode({
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center text-center">
-            <div className="root-gain-pop mb-4 text-5xl" aria-hidden>
-              🌧️🌱
+            <div className="root-gain-pop mb-3 w-full max-w-[180px]" aria-hidden>
+              <RootCharacter
+                level={rootState.level}
+                hpPercent={rootPercent}
+                growing={leveledUp || gainFlash}
+              />
             </div>
             <h3 className="text-lg font-bold text-[#3d352c]">
               {leveledUp ? "뿌리 레벨 업!" : "뿌리가 더 깊어졌어요"}

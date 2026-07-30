@@ -25,6 +25,21 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), "Apple SD Gothic Neo", "Malgun Gothic",
     sans-serif;
+  /* 모바일 더블탭 확대 방지 */
+  touch-action: manipulation;
+}
+
+/* iOS: 16px 미만 input 포커스 시 자동 줌 방지 */
+input,
+textarea,
+select {
+  font-size: 16px;
+  touch-action: manipulation;
+}
+
+button,
+a {
+  touch-action: manipulation;
 }
 
 @keyframes float {
