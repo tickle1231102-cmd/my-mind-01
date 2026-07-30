@@ -4,6 +4,7 @@ import {
   type BotContext,
 } from "@/lib/healing-bot";
 import type { Sentiment } from "@/lib/sentiment";
+import { generateText } from "ai";
 import { NextResponse } from "next/server";
 
 type ChatRequestBody = {
@@ -15,7 +16,8 @@ type ChatRequestBody = {
   wasRevived?: boolean;
 };
 
-const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_GATEWAY_MODEL = "google/gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 
 function buildContext(body: ChatRequestBody): BotContext {
   return {
@@ -27,7 +29,42 @@ function buildContext(body: ChatRequestBody): BotContext {
   };
 }
 
-async function callGemini(
+function hasGatewayAuth(): boolean {
+  return Boolean(
+    process.env.AI_GATEWAY_API_KEY?.trim() ||
+      process.env.VERCEL_OIDC_TOKEN?.trim(),
+  );
+}
+
+async function callAiGateway(
+  message: string,
+  context: BotContext,
+): Promise<string | null> {
+  const model =
+    process.env.AI_GATEWAY_MODEL?.trim() || DEFAULT_GATEWAY_MODEL;
+
+  try {
+    const { text } = await generateText({
+      model,
+      system: buildHealingSystemPrompt(context),
+      prompt: message,
+      temperature: 0.85,
+      maxOutputTokens: 180,
+      providerOptions: {
+        gateway: {
+          tags: ["feature:healing-chat", "app:my-mind-01"],
+        },
+      },
+    });
+
+    const reply = text.trim();
+    return reply || null;
+  } catch {
+    return null;
+  }
+}
+
+async function callGeminiDirect(
   apiKey: string,
   model: string,
   message: string,
@@ -81,28 +118,40 @@ export async function POST(request: Request) {
     }
 
     const context = buildContext(body);
-    const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
 
-    if (!apiKey) {
-      return NextResponse.json({
-        reply: getFallbackReply(context),
-        source: "fallback",
-      });
+    // 1) Preferred: AI SDK → AI Gateway (OIDC / AI_GATEWAY_API_KEY)
+    if (hasGatewayAuth()) {
+      const gatewayReply = await callAiGateway(message, context);
+      if (gatewayReply) {
+        return NextResponse.json({
+          reply: gatewayReply,
+          source: "ai-gateway",
+        });
+      }
     }
 
-    const aiReply = await callGemini(apiKey, model, message, context);
-
-    if (!aiReply) {
-      return NextResponse.json({
-        reply: getFallbackReply(context),
-        source: "fallback",
-      });
+    // 2) Legacy fallback: direct Gemini API key
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
+    if (geminiKey) {
+      const model = process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
+      const geminiReply = await callGeminiDirect(
+        geminiKey,
+        model,
+        message,
+        context,
+      );
+      if (geminiReply) {
+        return NextResponse.json({
+          reply: geminiReply,
+          source: "gemini",
+        });
+      }
     }
 
+    // 3) Local healing replies when no auth / provider failure
     return NextResponse.json({
-      reply: aiReply,
-      source: "ai",
+      reply: getFallbackReply(context),
+      source: "fallback",
     });
   } catch {
     return NextResponse.json(

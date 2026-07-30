@@ -1,0 +1,23 @@
+마음의 화분 — Audio Credits
+================================
+
+1) Background Music (BGM)
+-------------------------
+File:    public/sounds/cute-bgm.m4a
+Track:   lvl 5 – the oasis (or resting place)
+Pack:    Indie Meditations FREE Music Pack
+Artist:  Yanni Ziangos (YannZ)
+Source:  https://opengameart.org/content/indie-meditations-free-music-pack
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+         https://creativecommons.org/licenses/by/4.0/
+
+Required attribution (CC BY 4.0):
+  Music by Yanni Ziangos a.k.a. YannZ
+  https://opengameart.org/content/indie-meditations-free-music-pack
+
+
+2) Sound Effect
+---------------
+File:    public/sounds/pop11.mp3
+Usage:   Seed / pot tap (물 주기) feedback pop
+Note:    Existing project asset (short UI pop SFX)

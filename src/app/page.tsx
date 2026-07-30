@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
 import { getFallbackReply } from "@/lib/healing-bot";
 import { RootStrengthenMode } from "@/components/RootStrengthenMode";
+import { SproutCharacter } from "@/components/SproutCharacter";
 import { recordMoodEntry } from "@/lib/mood-log";
 import { getRootState, type RootState } from "@/lib/root-strength";
 import { detectSentiment, type Sentiment } from "@/lib/sentiment";
@@ -29,13 +30,18 @@ function randomOf<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function getSproutSrc(level: number): string | null {
-  if (level <= 0) return null;
-  const stage = Math.min(level, 5);
-  return `/sprouts/sprout0${stage}.png`;
-}
+const POT_NAME_KEY = "healing-garden-pot-name";
+const POT_TOUCH_GUIDE_KEY = "healing-garden-pot-touch-guide";
+const MAX_POT_NAME_LENGTH = 10;
 
-const SEED_SIZE = 1024;
+/** 이름 뒤에 을/를 조사 붙이기 */
+function withEulReul(name: string): string {
+  const last = name.charAt(name.length - 1);
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return `${name}을(를)`;
+  const hasBatchim = (code - 0xac00) % 28 !== 0;
+  return hasBatchim ? `${name}을` : `${name}를`;
+}
 
 function getPlantStatus(
   hp: number,
@@ -96,9 +102,6 @@ const QUICK_EMOJIS: { emoji: string; tone: "positive" | "negative" }[] = [
   { emoji: "😡", tone: "negative" },
 ];
 
-const SPROUT_WIDTH = 176;
-const SPROUT_HEIGHT = 331;
-
 type BackgroundId = "room" | "beige" | "grassland";
 
 const BACKGROUNDS: {
@@ -111,19 +114,20 @@ const BACKGROUNDS: {
   {
     id: "room",
     label: "햇살 창가",
-    src: "/background-01.png",
-    imageClass: "object-cover object-[center_55%]",
+    src: "/background-room.png",
+    imageClass: "object-cover object-[center_60%]",
   },
   {
     id: "beige",
     label: "몽글 베이지",
-    sceneClass: "bg-gradient-to-b from-[#f7f2ea] via-[#efe8dc] to-[#e4d8c8]",
+    src: "/background-beige.png",
+    imageClass: "object-cover object-center",
   },
   {
     id: "grassland",
     label: "푸른 초원",
-    src: "/grassland01.png",
-    imageClass: "object-cover object-center",
+    src: "/background-grass.png",
+    imageClass: "object-cover object-[center_65%]",
   },
 ];
 
@@ -254,10 +258,19 @@ export default function Home() {
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [showRootMode, setShowRootMode] = useState(false);
   const [rootState, setRootState] = useState<RootState>({ level: 0, hp: 0 });
+  const [bgmEnabled, setBgmEnabled] = useState(true);
+  const [potName, setPotName] = useState("");
+  const [nameDraft, setNameDraft] = useState("");
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [showPotTouchGuide, setShowPotTouchGuide] = useState(false);
+  const [potGuideLeaving, setPotGuideLeaving] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const popSoundRef = useRef<HTMLAudioElement | null>(null);
+  const bgmRef = useRef<HTMLAudioElement | null>(null);
+  const bgmEnabledRef = useRef(true);
   const wateringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -273,16 +286,90 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const savedName = window.localStorage.getItem(POT_NAME_KEY)?.trim() ?? "";
+    if (savedName) {
+      setPotName(savedName);
+      if (window.localStorage.getItem(POT_TOUCH_GUIDE_KEY) !== "done") {
+        setShowPotTouchGuide(true);
+      }
+    } else {
+      setShowWelcome(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showWelcome) return;
+    const id = window.setTimeout(() => nameInputRef.current?.focus(), 180);
+    return () => window.clearTimeout(id);
+  }, [showWelcome]);
+
+  useEffect(() => {
     const audio = new Audio("/sounds/pop11.mp3");
     audio.preload = "auto";
     popSoundRef.current = audio;
 
+    const bgm = new Audio("/sounds/cute-bgm.m4a");
+    bgm.preload = "auto";
+    bgm.loop = true;
+    bgm.volume = 0.22;
+    bgmRef.current = bgm;
+
+    const saved = window.localStorage.getItem("healing-garden-bgm");
+    const enabled = saved !== "off";
+    bgmEnabledRef.current = enabled;
+    setBgmEnabled(enabled);
+
     return () => {
       audio.pause();
       popSoundRef.current = null;
+      bgm.pause();
+      bgmRef.current = null;
       if (wateringTimerRef.current) clearTimeout(wateringTimerRef.current);
     };
   }, []);
+
+  function playBgm() {
+    if (!bgmEnabledRef.current || !bgmRef.current) return;
+    void bgmRef.current.play().catch(() => {});
+  }
+
+  function toggleBgm() {
+    const next = !bgmEnabled;
+    bgmEnabledRef.current = next;
+    setBgmEnabled(next);
+    window.localStorage.setItem("healing-garden-bgm", next ? "on" : "off");
+    const bgm = bgmRef.current;
+    if (!bgm) return;
+    if (next) {
+      void bgm.play().catch(() => {});
+    } else {
+      bgm.pause();
+    }
+  }
+
+  function dismissPotTouchGuide() {
+    if (!showPotTouchGuide && !potGuideLeaving) return;
+    window.localStorage.setItem(POT_TOUCH_GUIDE_KEY, "done");
+    setPotGuideLeaving(true);
+    window.setTimeout(() => {
+      setShowPotTouchGuide(false);
+      setPotGuideLeaving(false);
+    }, 380);
+  }
+
+  function handleWelcomeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const name = nameDraft.trim().slice(0, MAX_POT_NAME_LENGTH);
+    if (!name) {
+      nameInputRef.current?.focus();
+      return;
+    }
+    window.localStorage.setItem(POT_NAME_KEY, name);
+    setPotName(name);
+    setShowWelcome(false);
+    setShowPotTouchGuide(true);
+    playBgm();
+  }
 
   function triggerWatering() {
     if (wateringTimerRef.current) clearTimeout(wateringTimerRef.current);
@@ -329,6 +416,8 @@ export default function Home() {
 
   function handlePotClick() {
     playPopSound();
+    playBgm();
+    dismissPotTouchGuide();
     applyHpGain(HP_POT_GAIN);
   }
 
@@ -460,16 +549,10 @@ export default function Home() {
   }
 
   const hpPercent = Math.round((hp / MAX_HP) * 100);
-  const sproutSrc = getSproutSrc(level);
   const isSeedStage = level === 0;
   const selectedBackground =
     BACKGROUNDS.find((bg) => bg.id === backgroundId) ?? BACKGROUNDS[0];
-  const potToneClass =
-    wiltedByNegative && hp === 0
-      ? "grayscale opacity-45 saturate-50"
-      : wiltedByNegative && hp <= 25
-        ? "grayscale-[40%] opacity-75 saturate-75"
-        : "opacity-100";
+  const isWiltedLook = wiltedByNegative && hp <= 25;
   const barColor =
     wiltedByNegative && hp === 0
       ? "#b5aea3"
@@ -534,9 +617,92 @@ export default function Home() {
         .water-drop { animation: water-drop 0.9s ease-in forwards; }
         .water-drop-delay { animation-delay: 0.15s; }
         .water-drop-delay-2 { animation-delay: 0.28s; }
+        @keyframes touch-guide-in {
+          0% { opacity: 0; transform: translateY(8px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes touch-guide-out {
+          0% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes touch-hand-tap {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          40% { transform: translate(-4px, 10px) scale(0.92); }
+          55% { transform: translate(-2px, 6px) scale(0.96); }
+        }
+        @keyframes touch-ripple {
+          0% { transform: scale(0.55); opacity: 0.5; }
+          100% { transform: scale(1.45); opacity: 0; }
+        }
+        @keyframes pot-guide-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(156, 175, 136, 0.35); }
+          50% { box-shadow: 0 0 0 10px rgba(156, 175, 136, 0); }
+        }
+        .touch-guide-enter { animation: touch-guide-in 0.4s ease-out both; }
+        .touch-guide-leave { animation: touch-guide-out 0.35s ease-in both; pointer-events: none; }
+        .touch-hand-tap { animation: touch-hand-tap 1.35s ease-in-out infinite; }
+        .touch-ripple { animation: touch-ripple 1.35s ease-out infinite; }
+        .pot-guide-pulse { animation: pot-guide-pulse 1.6s ease-out infinite; border-radius: 9999px; }
       `}</style>
 
       <div className="relative flex min-h-dvh flex-col bg-[#FDFBF7]">
+        {showWelcome && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#4a5248]/35 px-5 backdrop-blur-[3px]">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="welcome-title"
+              className="touch-guide-enter w-full max-w-sm rounded-3xl border border-[#e8e0d4] bg-[#FDFBF7] p-6 shadow-xl"
+            >
+              <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
+                HEALING GARDEN
+              </p>
+              <h2
+                id="welcome-title"
+                className="mt-1 text-xl font-bold text-[#4a5248]"
+              >
+                마음의 화분에 오신 걸 환영해요
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-[#6d655c]">
+                긍정의 말로 씨앗을 키우고, 무거운 감정은 마음 기록장에
+                내려놓아 보세요. 당신만의 작은 정원이 자랄 거예요.
+              </p>
+
+              <form onSubmit={handleWelcomeSubmit} className="mt-5 space-y-3">
+                <label
+                  htmlFor="pot-name"
+                  className="block text-sm font-semibold text-[#6d8a5e]"
+                >
+                  주인공 화분의 이름을 지어 주세요
+                </label>
+                <input
+                  ref={nameInputRef}
+                  id="pot-name"
+                  type="text"
+                  value={nameDraft}
+                  onChange={(e) =>
+                    setNameDraft(e.target.value.slice(0, MAX_POT_NAME_LENGTH))
+                  }
+                  maxLength={MAX_POT_NAME_LENGTH}
+                  placeholder="예: 몽실이, 햇살"
+                  className="w-full rounded-2xl border border-[#e8e0d4] bg-white px-4 py-3 text-sm text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25"
+                  autoComplete="off"
+                />
+                <p className="text-right text-[11px] text-[#8ba4b4]">
+                  {nameDraft.trim().length}/{MAX_POT_NAME_LENGTH}
+                </p>
+                <button
+                  type="submit"
+                  disabled={!nameDraft.trim()}
+                  className="w-full rounded-2xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  정원 시작하기
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* 배경 몽글몽글 장식 */}
         <div
           className="pointer-events-none absolute inset-0 overflow-hidden"
@@ -707,11 +873,62 @@ export default function Home() {
                   </h1>
                 </div>
               </div>
-              <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
-                  Mind level
-                </p>
-                <p className="text-2xl font-bold text-[#6d8a5e]">Lv.{level}</p>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleBgm}
+                  aria-label={bgmEnabled ? "배경음악 끄기" : "배경음악 켜기"}
+                  aria-pressed={bgmEnabled}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e8dcc8] bg-white/80 text-[#6d8a5e] shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95"
+                >
+                  {bgmEnabled ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="h-5 w-5"
+                      aria-hidden
+                    >
+                      <path
+                        d="M11 5 6.5 9H3v6h3.5L11 19V5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M15.5 8.5a4.5 4.5 0 0 1 0 7M18 6a8 8 0 0 1 0 12"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="h-5 w-5"
+                      aria-hidden
+                    >
+                      <path
+                        d="M11 5 6.5 9H3v6h3.5L11 19V5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="m16 10 5 5M21 10l-5 5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
+                </button>
+                <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
+                    Mind level
+                  </p>
+                  <p className="text-2xl font-bold text-[#6d8a5e]">Lv.{level}</p>
+                </div>
               </div>
             </div>
 
@@ -741,9 +958,9 @@ export default function Home() {
           </header>
 
           {/* ── 성장 공간 + 화분 (배경 위) ── */}
-          <main className="mt-2 flex min-h-0 flex-1 flex-col sm:mt-3">
+          <main className="mt-2 flex shrink-0 flex-col sm:mt-3">
             <div
-              className={`relative min-h-[11.5rem] w-full flex-1 overflow-hidden rounded-2xl border border-[#e8dcc8]/80 shadow-md sm:min-h-[13.5rem] ${selectedBackground.sceneClass ?? ""}`}
+              className={`relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-2xl border border-[#e8dcc8]/80 shadow-md ${selectedBackground.sceneClass ?? ""}`}
             >
               {selectedBackground.src && (
                 <Image
@@ -789,70 +1006,71 @@ export default function Home() {
                     </div>
                   )}
 
+                  {(showPotTouchGuide || potGuideLeaving) && potName && (
+                    <div
+                      className={`pointer-events-none absolute left-1/2 z-20 flex -translate-x-1/2 flex-col items-center ${
+                        isSeedStage
+                          ? "-top-14 sm:-top-16"
+                          : "-top-16 sm:-top-[4.75rem]"
+                      } ${potGuideLeaving ? "touch-guide-leave" : "touch-guide-enter"}`}
+                      aria-live="polite"
+                    >
+                      <p className="mb-1 whitespace-nowrap rounded-full border border-[#e8dcc8] bg-white/95 px-3 py-1 text-xs font-semibold text-[#6d8a5e] shadow-sm sm:text-sm">
+                        {withEulReul(potName)} 터치해보세요
+                      </p>
+                      <span
+                        className="touch-hand-tap text-3xl drop-shadow-sm select-none sm:text-4xl"
+                        role="img"
+                        aria-label={`${withEulReul(potName)} 터치해보세요`}
+                      >
+                        👆
+                      </span>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={handlePotClick}
                     aria-label={
-                      isSeedStage
-                        ? "씨앗을 눌러 물 주기"
-                        : `레벨 ${level} 화분을 눌러 물 주기`
+                      potName
+                        ? `${potName}을(를) 눌러 물 주기`
+                        : isSeedStage
+                          ? "씨앗을 눌러 물 주기"
+                          : `레벨 ${level} 화분을 눌러 물 주기`
                     }
-                    className={`relative z-0 flex cursor-pointer justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
-                      isSeedStage ? "items-center" : "items-end"
-                    } ${
-                      plantFx === "shake"
-                        ? "plant-shake"
-                        : plantFx === "bloom"
-                          ? "plant-bloom"
-                          : plantFx === "wilt"
-                            ? "plant-wilt"
-                            : "plant-float"
+                    className={`relative z-[2] flex cursor-pointer items-end justify-center border-0 bg-transparent p-0 transition active:scale-95 ${
+                      showPotTouchGuide ? "pot-guide-pulse" : ""
                     }`}
                   >
-                    {isSeedStage ? (
-                      <Image
-                        key="seed"
-                        src="/seed001.png"
-                        alt="마음의 씨앗"
-                        width={SEED_SIZE}
-                        height={SEED_SIZE}
-                        priority
-                        draggable={false}
-                        className={`pointer-events-none h-auto w-14 select-none object-contain drop-shadow-[0_10px_18px_rgba(62,52,42,0.18)] transition-all duration-700 sm:w-16 ${potToneClass}`}
-                      />
-                    ) : (
-                      sproutSrc && (
-                        <Image
-                          key={level}
-                          src={sproutSrc}
-                          alt={`레벨 ${level} 마음의 화분`}
-                          width={SPROUT_WIDTH}
-                          height={SPROUT_HEIGHT}
-                          priority
-                          draggable={false}
-                          className={`pointer-events-none h-auto w-[4.75rem] select-none object-contain object-bottom drop-shadow-[-3px_5px_10px_rgba(62,52,42,0.28)] transition-all duration-700 sm:w-[5.5rem] ${potToneClass}`}
-                        />
-                      )
-                    )}
+                    <SproutCharacter
+                      level={level}
+                      fx={plantFx}
+                      wilted={isWiltedLook}
+                    />
                   </button>
                 </div>
               </div>
             </div>
 
-            <p className="mt-3 max-w-xs self-center rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-2 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
+            {potName && (
+              <p className="mt-2 text-center text-xs font-semibold tracking-wide text-[#8ba4b4]">
+                {potName}
+              </p>
+            )}
+            <p className="mt-1 max-w-xs self-center rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-1.5 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
               {getPlantStatus(hp, level, wiltedByNegative)}
             </p>
-            <p className="mt-2 pb-1 text-center text-xs text-[#8ba4b4]">
+            <p className="mt-1 text-center text-xs text-[#8ba4b4]">
               {isSeedStage
-                ? "긍정의 말 한마디가 씨앗을 깨워요 · 씨앗을 터치해 물도 줄 수 있어요"
-                : "긍정의 말 한마디가 씨앗을 깨워요 · 화분을 터치해 물도 줄 수 있어요"}
+                ? `긍정의 말 한마디가 씨앗을 깨워요 · ${potName ? withEulReul(potName) : "씨앗을"} 터치해 물도 줄 수 있어요`
+                : `긍정의 말 한마디가 씨앗을 깨워요 · ${potName ? withEulReul(potName) : "화분을"} 터치해 물도 줄 수 있어요`}
             </p>
 
             {!isSeedStage && (
               <button
                 type="button"
                 onClick={() => setShowRootMode(true)}
-                className="mt-3 mb-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#b8c9a8] bg-gradient-to-b from-[#eef4e8] to-[#dce8d4] px-4 py-3 text-sm font-semibold text-[#4a5a3c] shadow-sm transition hover:from-[#e4eedc] hover:to-[#d0e0c8] active:scale-[0.98]"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#b8c9a8] bg-gradient-to-b from-[#eef4e8] to-[#dce8d4] px-4 py-3 text-sm font-semibold text-[#4a5a3c] shadow-sm transition hover:from-[#e4eedc] hover:to-[#d0e0c8] active:scale-[0.98]"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -884,7 +1102,7 @@ export default function Home() {
           </main>
 
           {/* ── 하단: 채팅창 ── */}
-          <footer className="mt-2 shrink-0 overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md sm:mt-3">
+          <footer className="mt-2 shrink-0 overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md">
             <div className="border-b border-[#ede8df] bg-gradient-to-r from-[#f5f0e8]/80 to-white/60 px-4 py-3">
               <p className="text-sm font-semibold text-[#4a5248]">
                 마음 기록장

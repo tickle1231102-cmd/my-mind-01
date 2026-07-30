@@ -11,6 +11,15 @@ export const metadata: Metadata = {
   title: "마음의 화분 | 감정 힐링 게임",
   description:
     "긍정의 말로 식물을 키우고, 부정의 감정을 비워내는 힐링 챗봇 게임",
+  icons: {
+    icon: [
+      { url: "/icons/icons_192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icons_512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/icons_192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
