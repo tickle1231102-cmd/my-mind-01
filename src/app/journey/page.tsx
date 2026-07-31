@@ -87,15 +87,21 @@ export default function JourneyPage() {
 
   const achievedCount = milestones.filter((m) => m.achieved).length;
   const currentStage = useMemo(() => {
-    const order =
-      realm === "underground"
-        ? UNDERGROUND_TERRAIN_ORDER
-        : SURFACE_TERRAIN_ORDER;
     const focus =
       milestones.find((m) => !m.achieved) ??
       milestones[milestones.length - 1];
     if (!focus) return 1;
-    const idx = order.indexOf(focus.terrain as (typeof order)[number]);
+
+    if (realm === "underground") {
+      const idx = UNDERGROUND_TERRAIN_ORDER.indexOf(
+        focus.terrain as (typeof UNDERGROUND_TERRAIN_ORDER)[number],
+      );
+      return idx >= 0 ? idx + 1 : 1;
+    }
+
+    const idx = SURFACE_TERRAIN_ORDER.indexOf(
+      focus.terrain as (typeof SURFACE_TERRAIN_ORDER)[number],
+    );
     return idx >= 0 ? idx + 1 : 1;
   }, [milestones, realm]);
   const questDoneCount = questProgress
