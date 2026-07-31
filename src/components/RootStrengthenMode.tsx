@@ -16,6 +16,8 @@ import { RootCharacter } from "@/components/RootCharacter";
 type RootStrengthenModeProps = {
   onClose: () => void;
   onRootStateChange: (state: RootState) => void;
+  /** 후회→감사 세션을 끝까지 마쳤을 때 (일일 퀘스트 등) */
+  onSessionComplete?: () => void;
 };
 
 type Step = 1 | 2 | "complete";
@@ -23,6 +25,7 @@ type Step = 1 | 2 | "complete";
 export function RootStrengthenMode({
   onClose,
   onRootStateChange,
+  onSessionComplete,
 }: RootStrengthenModeProps) {
   const [step, setStep] = useState<Step>(1);
   const [regret, setRegret] = useState("");
@@ -63,6 +66,7 @@ export function RootStrengthenMode({
     setLeveledUp(didLevelUp || next.level > beforeLevel);
     setGainFlash(true);
     setStep("complete");
+    onSessionComplete?.();
 
     window.setTimeout(() => setGainFlash(false), 1200);
   }
