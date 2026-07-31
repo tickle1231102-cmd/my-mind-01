@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { PlantMood } from "@/lib/sentiment";
+import type { PotSkinId } from "@/lib/store-catalog";
+import { POT_SKIN_COLORS } from "@/components/PotSkinPreview";
 
 export type SproutFx = "float" | "shake" | "bloom" | "wilt";
 
@@ -12,6 +14,7 @@ type SproutCharacterProps = {
   mood?: PlantMood;
   /** 같은 mood를 연속 재생할 때 하트/눈물 애니메이션 리셋용 */
   moodPulse?: number;
+  potSkinId?: PotSkinId | string;
   className?: string;
 };
 
@@ -25,6 +28,7 @@ export function SproutCharacter({
   wilted = false,
   mood = "none",
   moodPulse = 0,
+  potSkinId = "default",
   className = "",
 }: SproutCharacterProps) {
   const stage = Math.max(0, Math.min(level, 5));
@@ -60,11 +64,23 @@ export function SproutCharacter({
           ? "sprout-mood-love"
           : "";
 
+  const skin = POT_SKIN_COLORS[potSkinId as PotSkinId] ?? POT_SKIN_COLORS.default;
+  const skinStyle = {
+    "--pot-body": skin.body,
+    "--pot-rim": skin.rim,
+    "--pot-rim-dark": skin.rimDark,
+    "--pot-soil": skin.soil,
+    "--pot-shadow": skin.shadow,
+    "--pot-accent": skin.accent ?? skin.rimDark,
+  } as CSSProperties;
+
   return (
     <div
       className={`sprout-character ${fxClass} ${toneClass} ${moodClass} ${growing ? "sprout-growing" : ""} ${className}`}
       data-stage={stage}
       data-mood={mood}
+      data-pot-skin={potSkinId}
+      style={skinStyle}
       aria-hidden
     >
       <style>{`
@@ -289,6 +305,21 @@ export function SproutCharacter({
         .sprout-growing .sc-sparkle { animation: sprout-sparkle 0.9s ease-out both; }
         .sc-blink { transform-origin: center; animation: sprout-blink 4.5s ease-in-out infinite; }
         .sprout-mood-angry .sc-blink { animation: none; }
+
+        /* pot skin overrides */
+        .sprout-character[data-pot-skin] .sc-pot ellipse,
+        .sprout-character[data-pot-skin] .sc-pot path,
+        .sprout-character[data-pot-skin] .sc-pot rect {
+          transition: fill 0.4s ease;
+        }
+        .sprout-character[data-pot-skin] .sc-pot > ellipse:first-child { fill: var(--pot-shadow); }
+        .sprout-character[data-pot-skin] .sc-pot > path:nth-of-type(1) { fill: var(--pot-body); }
+        .sprout-character[data-pot-skin] .sc-pot > rect { fill: var(--pot-rim); }
+        .sprout-character[data-pot-skin] .sc-pot > ellipse:nth-of-type(2) { fill: var(--pot-rim-dark); }
+        .sprout-character[data-pot-skin] .sc-pot > ellipse:nth-of-type(3) { fill: var(--pot-soil); opacity: 0.55; }
+        .sprout-character[data-pot-skin] .sc-pot > ellipse:nth-of-type(4) { fill: var(--pot-soil); opacity: 0.35; }
+        .sprout-character[data-pot-skin="glass"] .sc-pot > path:nth-of-type(1) { opacity: 0.82; }
+        .sprout-character[data-pot-skin="vintage-tin"] .sc-pot > rect { fill: var(--pot-accent); opacity: 0.35; }
       `}</style>
 
       {mood === "love" && (

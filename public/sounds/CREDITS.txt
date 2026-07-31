@@ -21,3 +21,9 @@ Required attribution (CC BY 4.0):
 File:    public/sounds/pop11.mp3
 Usage:   Seed / pot tap (물 주기) feedback pop
 Note:    Existing project asset (short UI pop SFX)
+
+3) Sound Effect
+---------------
+File:    public/sounds/bubble-soft.wav
+Usage:   Pot speech-bubble dismiss (말풍선 터치/클릭)
+Note:    Soft calm chime SFX (project-made; gentle sine with slow attack/decay)

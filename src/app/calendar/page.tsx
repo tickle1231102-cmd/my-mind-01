@@ -1,6 +1,7 @@
 "use client";
 
 import { MoodBlob } from "@/components/MoodBlob";
+import { PotionBadge } from "@/components/PotionBadge";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -149,7 +150,7 @@ export default function CalendarPage() {
           >
             ←
           </Link>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
               HEALING GARDEN
             </p>
@@ -157,6 +158,7 @@ export default function CalendarPage() {
               마음 달력
             </h1>
           </div>
+          <PotionBadge />
         </header>
 
         <section className="rounded-3xl border border-[#e8e0d4] bg-white/85 p-4 shadow-md backdrop-blur-sm sm:p-5">

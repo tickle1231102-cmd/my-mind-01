@@ -2,18 +2,33 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
-import { getFallbackReply } from "@/lib/healing-bot";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useBgm } from "@/components/BgmProvider";
+import { PotionBadge } from "@/components/PotionBadge";
+import { PotionIcon } from "@/components/PotionIcon";
 import { RootStrengthenMode } from "@/components/RootStrengthenMode";
+import { BackgroundSceneOverlay } from "@/components/BackgroundPreview";
 import { SproutCharacter } from "@/components/SproutCharacter";
 import { WateringCan } from "@/components/WateringCan";
+import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
+import { completeDailyQuest } from "@/lib/daily-quests";
+import { getFallbackReply } from "@/lib/healing-bot";
+import {
+  BACKGROUNDS,
+  getBackgroundById,
+  type BackgroundId,
+} from "@/lib/backgrounds";
+import {
+  getEquipped,
+  INVENTORY_CHANGE_EVENT,
+} from "@/lib/inventory";
 import { recordMoodEntry } from "@/lib/mood-log";
 import {
   BUBBLE_VISIBLE_MS,
   nextBubbleDelayMs,
   pickPotBubble,
 } from "@/lib/pot-bubbles";
+import { getPlantState, setPlantState } from "@/lib/plant-state";
 import { getRootState, type RootState } from "@/lib/root-strength";
 import {
   detectPlantMood,
@@ -21,6 +36,7 @@ import {
   type PlantMood,
   type Sentiment,
 } from "@/lib/sentiment";
+import type { PotSkinId } from "@/lib/store-catalog";
 
 const MAX_HP = 100;
 const HP_GAIN = 15;
@@ -114,45 +130,14 @@ const QUICK_EMOJIS: { emoji: string; tone: "positive" | "negative" }[] = [
   { emoji: "😡", tone: "negative" },
 ];
 
-type BackgroundId = "room" | "beige" | "grassland";
-
-const BACKGROUNDS: {
-  id: BackgroundId;
-  label: string;
-  src?: string;
-  imageClass?: string;
-  sceneClass?: string;
-}[] = [
-  {
-    id: "room",
-    label: "햇살 창가",
-    src: "/background-room.png",
-    imageClass: "object-cover object-[center_60%]",
-  },
-  {
-    id: "beige",
-    label: "몽글 베이지",
-    src: "/background-beige.png",
-    imageClass: "object-cover object-center",
-  },
-  {
-    id: "grassland",
-    label: "푸른 초원",
-    src: "/background-grass.png",
-    imageClass: "object-cover object-[center_65%]",
-  },
-];
-
-type MenuSection = "main" | "background";
-
-type MenuItemId = "journey" | "store" | "item" | "background" | "calendar";
+type MenuItemId = "journey" | "store" | "item" | "calendar" | "settings";
 
 const MENU_ITEMS: { id: MenuItemId; label: string }[] = [
   { id: "journey", label: "Journey" },
   { id: "store", label: "Store" },
   { id: "item", label: "Item" },
-  { id: "background", label: "Background" },
   { id: "calendar", label: "Calendar" },
+  { id: "settings", label: "Settings" },
 ];
 
 function MenuIcon({ id }: { id: MenuItemId }) {
@@ -206,28 +191,6 @@ function MenuIcon({ id }: { id: MenuItemId }) {
           />
         </svg>
       );
-    case "background":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-          <rect
-            x="3"
-            y="5"
-            width="18"
-            height="14"
-            rx="2"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          />
-          <path
-            d="M3 15l5-4 4 3 3-2 6 5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="8" cy="9" r="1.5" fill="currentColor" />
-        </svg>
-      );
     case "calendar":
       return (
         <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
@@ -249,10 +212,23 @@ function MenuIcon({ id }: { id: MenuItemId }) {
           <rect x="8" y="13" width="3" height="3" rx="0.5" fill="currentColor" />
         </svg>
       );
+    case "settings":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+          <path
+            d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
   }
 }
 
 export default function Home() {
+  const { ensurePlaying } = useBgm();
   const [level, setLevel] = useState(0);
   const [hp, setHp] = useState(0);
   const [messages, setMessages] = useState<Message[]>([
@@ -267,13 +243,12 @@ export default function Home() {
   const [hpGlow, setHpGlow] = useState<"none" | "up" | "down">("none");
   const [watering, setWatering] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [menuSection, setMenuSection] = useState<MenuSection>("main");
   const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
+  const [potSkinId, setPotSkinId] = useState<PotSkinId>("default");
   const [wiltedByNegative, setWiltedByNegative] = useState(false);
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [showRootMode, setShowRootMode] = useState(false);
   const [rootState, setRootState] = useState<RootState>({ level: 0, hp: 0 });
-  const [bgmEnabled, setBgmEnabled] = useState(true);
   const [potName, setPotName] = useState("");
   const [nameDraft, setNameDraft] = useState("");
   const [showWelcome, setShowWelcome] = useState(false);
@@ -282,14 +257,16 @@ export default function Home() {
   const [showRootGuide, setShowRootGuide] = useState(false);
   const [potBubble, setPotBubble] = useState<string | null>(null);
   const [potBubbleLeaving, setPotBubbleLeaving] = useState(false);
+  const [plantHydrated, setPlantHydrated] = useState(false);
+  const [questToast, setQuestToast] = useState<string | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const popSoundRef = useRef<HTMLAudioElement | null>(null);
-  const bgmRef = useRef<HTMLAudioElement | null>(null);
-  const bgmEnabledRef = useRef(true);
+  const bubblePopSoundRef = useRef<HTMLAudioElement | null>(null);
   const wateringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const questToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const potBubbleTextRef = useRef<string | null>(null);
   const potBubbleHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -297,6 +274,7 @@ export default function Home() {
   const potBubbleScheduleRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const dismissPotBubbleRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -317,6 +295,44 @@ export default function Home() {
   useEffect(() => {
     setRootState(getRootState());
   }, []);
+
+  // 장착된 배경·화분 스킨 — inventory에서 로드
+  useEffect(() => {
+    function syncEquipped() {
+      const equipped = getEquipped();
+      setBackgroundId(equipped.backgroundId);
+      setPotSkinId(equipped.potSkinId);
+    }
+    syncEquipped();
+    window.addEventListener(INVENTORY_CHANGE_EVENT, syncEquipped);
+    window.addEventListener("focus", syncEquipped);
+    return () => {
+      window.removeEventListener(INVENTORY_CHANGE_EVENT, syncEquipped);
+      window.removeEventListener("focus", syncEquipped);
+    };
+  }, []);
+
+  // Journey 지하 여정 등에서 /?openRoot=1 로 오면 뿌리 강화 모드를 바로 연다.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("openRoot") !== "1") return;
+    setShowRootMode(true);
+    window.history.replaceState({}, "", "/");
+  }, []);
+
+  // 화분 레벨/HP는 Journey 지도가 실제 성장 이력을 보여줄 수 있도록 저장해둔다.
+  useEffect(() => {
+    const saved = getPlantState();
+    setLevel(saved.level);
+    setHp(saved.hp);
+    setWiltedByNegative(saved.wiltedByNegative);
+    setPlantHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!plantHydrated) return;
+    setPlantState({ level, hp, wiltedByNegative });
+  }, [level, hp, wiltedByNegative, plantHydrated]);
 
   useEffect(() => {
     const savedName = window.localStorage.getItem(POT_NAME_KEY)?.trim() ?? "";
@@ -349,7 +365,12 @@ export default function Home() {
 
     let cancelled = false;
 
+    let isLeaving = false;
+
     const hideBubble = () => {
+      if (cancelled || isLeaving) return;
+      if (!potBubbleTextRef.current) return;
+      isLeaving = true;
       setPotBubbleLeaving(true);
       if (potBubbleHideTimerRef.current) {
         clearTimeout(potBubbleHideTimerRef.current);
@@ -359,13 +380,17 @@ export default function Home() {
         setPotBubbleLeaving(false);
         potBubbleTextRef.current = null;
         potBubbleHideTimerRef.current = null;
+        isLeaving = false;
       }, 320);
     };
+
+    dismissPotBubbleRef.current = hideBubble;
 
     const showBubble = () => {
       if (cancelled) return;
       const next = pickPotBubble(potName, potBubbleTextRef.current);
       potBubbleTextRef.current = next.text;
+      isLeaving = false;
       setPotBubbleLeaving(false);
       setPotBubble(next.text);
       if (potBubbleHideTimerRef.current) {
@@ -389,6 +414,7 @@ export default function Home() {
 
     return () => {
       cancelled = true;
+      dismissPotBubbleRef.current = null;
       if (potBubbleScheduleRef.current) {
         clearTimeout(potBubbleScheduleRef.current);
         potBubbleScheduleRef.current = null;
@@ -405,43 +431,39 @@ export default function Home() {
     audio.preload = "auto";
     popSoundRef.current = audio;
 
-    const bgm = new Audio("/sounds/cute-bgm.m4a");
-    bgm.preload = "auto";
-    bgm.loop = true;
-    bgm.volume = 0.22;
-    bgmRef.current = bgm;
-
-    const saved = window.localStorage.getItem("healing-garden-bgm");
-    const enabled = saved !== "off";
-    bgmEnabledRef.current = enabled;
-    setBgmEnabled(enabled);
+    const bubblePop = new Audio("/sounds/bubble-soft.wav");
+    bubblePop.preload = "auto";
+    bubblePop.volume = 0.35;
+    bubblePopSoundRef.current = bubblePop;
 
     return () => {
       audio.pause();
       popSoundRef.current = null;
-      bgm.pause();
-      bgmRef.current = null;
+      bubblePop.pause();
+      bubblePopSoundRef.current = null;
       if (wateringTimerRef.current) clearTimeout(wateringTimerRef.current);
+      if (questToastTimerRef.current) clearTimeout(questToastTimerRef.current);
     };
   }, []);
 
-  function playBgm() {
-    if (!bgmEnabledRef.current || !bgmRef.current) return;
-    void bgmRef.current.play().catch(() => {});
-  }
-
-  function toggleBgm() {
-    const next = !bgmEnabled;
-    bgmEnabledRef.current = next;
-    setBgmEnabled(next);
-    window.localStorage.setItem("healing-garden-bgm", next ? "on" : "off");
-    const bgm = bgmRef.current;
-    if (!bgm) return;
-    if (next) {
-      void bgm.play().catch(() => {});
-    } else {
-      bgm.pause();
-    }
+  function showQuestRewardToast(result: {
+    newlyCompleted: boolean;
+    potionGained: number;
+    bonusGained: number;
+  }) {
+    if (!result.newlyCompleted) return;
+    const total = result.potionGained + result.bonusGained;
+    if (total <= 0) return;
+    const label =
+      result.bonusGained > 0
+        ? `+${total} 포션 · 오늘 여정 완료!`
+        : `+${total} 포션`;
+    setQuestToast(label);
+    if (questToastTimerRef.current) clearTimeout(questToastTimerRef.current);
+    questToastTimerRef.current = setTimeout(() => {
+      setQuestToast(null);
+      questToastTimerRef.current = null;
+    }, 1600);
   }
 
   function dismissPotTouchGuide() {
@@ -465,7 +487,7 @@ export default function Home() {
     setPotName(name);
     setShowWelcome(false);
     setShowPotTouchGuide(true);
-    playBgm();
+    ensurePlaying();
   }
 
   function triggerWatering() {
@@ -525,11 +547,28 @@ export default function Home() {
     void audio.play().catch(() => {});
   }
 
+  function playBubblePopSound() {
+    const audio = bubblePopSoundRef.current;
+    if (!audio) return;
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  }
+
+  function handlePotBubbleDismiss(e: MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (potBubbleLeaving || !potBubble) return;
+    playBubblePopSound();
+    ensurePlaying();
+    dismissPotBubbleRef.current?.();
+  }
+
   function handlePotClick() {
     playPopSound();
-    playBgm();
+    ensurePlaying();
     dismissPotTouchGuide();
     applyHpGain(HP_POT_GAIN);
+    showQuestRewardToast(completeDailyQuest("water"));
   }
 
   function playFx(kind: PlantFx) {
@@ -602,7 +641,9 @@ export default function Home() {
   async function dispatchUserMessage(text: string, tone: Sentiment) {
     if (isBotTyping) return;
 
+    ensurePlaying();
     recordMoodEntry(text, tone);
+    showQuestRewardToast(completeDailyQuest("chat"));
 
     const userMsg: Message = { id: nextId, from: "user", text, tone };
     let id = nextId + 1;
@@ -674,8 +715,8 @@ export default function Home() {
   }
 
   function sendHint(hint: string) {
-    setInput(hint);
-    inputRef.current?.focus();
+    if (isBotTyping) return;
+    void dispatchUserMessage(hint, detectSentiment(hint));
   }
 
   function sendEmoji(emoji: string, tone: "positive" | "negative") {
@@ -687,7 +728,7 @@ export default function Home() {
   const hpPercent = Math.round((hp / MAX_HP) * 100);
   const isSeedStage = level === 0;
   const selectedBackground =
-    BACKGROUNDS.find((bg) => bg.id === backgroundId) ?? BACKGROUNDS[0];
+    getBackgroundById(backgroundId) ?? BACKGROUNDS[0];
   const isWiltedLook = wiltedByNegative && hp <= 25;
   const barColor =
     wiltedByNegative && hp === 0
@@ -922,12 +963,7 @@ export default function Home() {
         <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
           <button
             type="button"
-            onClick={() => {
-              setMenuOpen((open) => {
-                if (open) setMenuSection("main");
-                return !open;
-              });
-            }}
+            onClick={() => setMenuOpen((open) => !open)}
             aria-label="메뉴 열기"
             aria-expanded={menuOpen}
             className="absolute left-4 top-[max(1.25rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white sm:left-6 sm:top-8"
@@ -943,123 +979,42 @@ export default function Home() {
                 type="button"
                 aria-label="메뉴 닫기"
                 className="fixed inset-0 z-40 bg-[#4a5248]/20"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setMenuSection("main");
-                }}
+                onClick={() => setMenuOpen(false)}
               />
               <nav className="absolute left-4 top-[calc(max(1.25rem,env(safe-area-inset-top))+3rem)] z-50 w-52 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md sm:left-6 sm:top-[calc(2rem+3rem)]">
-                {menuSection === "main" ? (
-                  <>
-                    <p className="border-b border-[#ede8df] px-4 py-3 text-sm font-semibold text-[#4a5248]">
-                      메뉴
-                    </p>
-                    <ul className="p-2">
-                      {MENU_ITEMS.map((item) => (
-                        <li key={item.id}>
-                          {item.id === "calendar" ? (
-                            <Link
-                              href="/calendar"
-                              onClick={() => {
-                                setMenuOpen(false);
-                                setMenuSection("main");
-                              }}
-                              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
-                            >
-                              <MenuIcon id={item.id} />
-                              Emotion calendar
-                            </Link>
-                          ) : item.id === "background" ? (
-                            <button
-                              type="button"
-                              onClick={() => setMenuSection("background")}
-                              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
-                            >
-                              <MenuIcon id={item.id} />
-                              background
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setMenuOpen(false)}
-                              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
-                            >
-                              <MenuIcon id={item.id} />
-                              {item.label}
-                            </button>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 border-b border-[#ede8df] px-3 py-3">
-                      <button
-                        type="button"
-                        onClick={() => setMenuSection("main")}
-                        aria-label="메뉴로 돌아가기"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#4a5248] transition hover:bg-[#f5f0e8]"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          className="h-4 w-4"
-                          aria-hidden
+                <ul className="p-2">
+                  {MENU_ITEMS.map((item) => (
+                    <li key={item.id}>
+                      {item.id === "calendar" ? (
+                        <Link
+                          href="/calendar"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
                         >
-                          <path
-                            d="M15 6 9 12l6 6"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                      <MenuIcon id="background" />
-                      <p className="text-sm font-semibold text-[#4a5248]">
-                        background
-                      </p>
-                    </div>
-                    <ul className="p-2">
-                      {BACKGROUNDS.map((bg) => (
-                        <li key={bg.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setBackgroundId(bg.id);
-                              setMenuOpen(false);
-                              setMenuSection("main");
-                            }}
-                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                              backgroundId === bg.id
-                                ? "bg-[#9caf88]/20 font-semibold text-[#3d5235]"
-                                : "text-[#4a5248] hover:bg-[#f5f0e8]"
-                            }`}
-                          >
-                            <span
-                              className={`h-8 w-10 shrink-0 overflow-hidden rounded-md border border-[#e8dcc8] ${
-                                bg.sceneClass ?? "bg-[#f0ebe3]"
-                              }`}
-                              aria-hidden
-                            >
-                              {bg.src && (
-                                <Image
-                                  src={bg.src}
-                                  alt=""
-                                  width={40}
-                                  height={32}
-                                  className="h-full w-full object-cover"
-                                />
-                              )}
-                            </span>
-                            {bg.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
+                          <MenuIcon id={item.id} />
+                          Emotion calendar
+                        </Link>
+                      ) : (
+                        <Link
+                          href={
+                            item.id === "journey"
+                              ? "/journey"
+                              : item.id === "store"
+                                ? "/store"
+                                : item.id === "item"
+                                  ? "/item"
+                                  : "/settings"
+                          }
+                          onClick={() => setMenuOpen(false)}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
+                        >
+                          <MenuIcon id={item.id} />
+                          {item.label}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </nav>
             </>
           )}
@@ -1079,55 +1034,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleBgm}
-                  aria-label={bgmEnabled ? "배경음악 끄기" : "배경음악 켜기"}
-                  aria-pressed={bgmEnabled}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e8dcc8] bg-white/80 text-[#6d8a5e] shadow-sm backdrop-blur-sm transition hover:bg-white active:scale-95"
-                >
-                  {bgmEnabled ? (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="h-5 w-5"
-                      aria-hidden
-                    >
-                      <path
-                        d="M11 5 6.5 9H3v6h3.5L11 19V5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M15.5 8.5a4.5 4.5 0 0 1 0 7M18 6a8 8 0 0 1 0 12"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="h-5 w-5"
-                      aria-hidden
-                    >
-                      <path
-                        d="M11 5 6.5 9H3v6h3.5L11 19V5Z"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="m16 10 5 5M21 10l-5 5"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  )}
-                </button>
+                <PotionBadge />
                 <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
                     Mind level
@@ -1177,6 +1084,9 @@ export default function Home() {
                   priority
                 />
               )}
+              {selectedBackground.sceneClass && !selectedBackground.src && (
+                <BackgroundSceneOverlay sceneId={selectedBackground.id} />
+              )}
 
               <div
                 className={`absolute inset-x-0 z-[1] flex justify-center ${
@@ -1223,15 +1133,20 @@ export default function Home() {
                     !showPotTouchGuide &&
                     !potGuideLeaving && (
                       <div
-                        className={`pointer-events-none absolute left-1/2 z-20 w-[min(15.5rem,78vw)] -translate-x-1/2 ${
+                        className={`absolute left-1/2 z-20 w-[min(15.5rem,78vw)] -translate-x-1/2 ${
                           isSeedStage
                             ? "-top-12 sm:-top-14"
                             : "-top-[4.25rem] sm:-top-[4.75rem]"
                         } ${potBubbleLeaving ? "pot-bubble-leave" : "pot-bubble-enter"}`}
-                        role="status"
-                        aria-live="polite"
                       >
-                        <div className="relative rounded-2xl border border-[#e8dcc8] bg-white/95 px-3.5 py-2.5 text-center shadow-md backdrop-blur-sm">
+                        <button
+                          type="button"
+                          data-no-click-sound
+                          onClick={handlePotBubbleDismiss}
+                          disabled={potBubbleLeaving}
+                          aria-label="말풍선 닫기"
+                          className="relative w-full cursor-pointer touch-manipulation rounded-2xl border border-[#e8dcc8] bg-white/95 px-3.5 py-2.5 text-center shadow-md backdrop-blur-sm transition active:scale-[0.97] disabled:cursor-default"
+                        >
                           {potName && (
                             <p className="mb-0.5 text-[10px] font-semibold tracking-wide text-[#8ba4b4]">
                               {potName}
@@ -1244,12 +1159,13 @@ export default function Home() {
                             className="absolute left-1/2 top-full -mt-px h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-r border-b border-[#e8dcc8] bg-white/95"
                             aria-hidden
                           />
-                        </div>
+                        </button>
                       </div>
                     )}
 
                   <button
                     type="button"
+                    data-no-click-sound
                     onClick={handlePotClick}
                     aria-label={
                       potName
@@ -1268,6 +1184,7 @@ export default function Home() {
                       wilted={isWiltedLook}
                       mood={plantMood}
                       moodPulse={moodPulse}
+                      potSkinId={potSkinId}
                     />
                   </button>
                 </div>
@@ -1301,17 +1218,66 @@ export default function Home() {
                   aria-hidden
                 >
                   <path
-                    d="M12 4v6M8 14c0-2 1.8-4 4-4s4 2 4 4v2H8v-2Z"
+                    d="M12 12V7"
                     stroke="currentColor"
                     strokeWidth="1.8"
                     strokeLinecap="round"
                   />
                   <path
-                    d="M6 18c2 2 10 2 12 0"
+                    d="M12 9.5C10.2 8.8 8.8 7.5 8 6"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12 9.5C13.8 8.8 15.2 7.5 16 6"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M3 12h18"
                     stroke="currentColor"
                     strokeWidth="1.8"
                     strokeLinecap="round"
                   />
+                  <path
+                    d="M12 12.5C12 15.5 11.5 18 11 21"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M12 13C9 15 6 17.5 4.5 20"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M12 13C15 15 18 17.5 19.5 20"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M9.5 16.5C7.5 18 6 19 5 19.8"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    opacity="0.75"
+                  />
+                  <path
+                    d="M14.5 16.5C16.5 18 18 19 19 19.8"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    opacity="0.75"
+                  />
+                  <circle cx="11" cy="21" r="1" fill="currentColor" opacity="0.6" />
+                  <circle cx="4.5" cy="20" r="0.9" fill="currentColor" opacity="0.5" />
+                  <circle cx="19.5" cy="20" r="0.9" fill="currentColor" opacity="0.5" />
                 </svg>
                 뿌리 강화 모드
                 {(rootState.level > 0 || rootState.hp > 0) && (
@@ -1427,7 +1393,17 @@ export default function Home() {
         <RootStrengthenMode
           onClose={() => setShowRootMode(false)}
           onRootStateChange={setRootState}
+          onSessionComplete={() =>
+            showQuestRewardToast(completeDailyQuest("root"))
+          }
         />
+      )}
+
+      {questToast && (
+        <div className="pointer-events-none fixed left-1/2 top-[22%] z-[100] -translate-x-1/2 animate-bounce rounded-full bg-[#4a5248]/85 px-4 py-2 text-sm font-bold text-white shadow-lg">
+          <PotionIcon className="mr-1 inline-block h-4 w-4 text-[#e8c9ee]" />
+          {questToast}
+        </div>
       )}
     </>
   );
