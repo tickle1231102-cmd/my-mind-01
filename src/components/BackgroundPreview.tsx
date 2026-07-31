@@ -7,13 +7,14 @@ import type { BackgroundDef } from "@/lib/backgrounds";
 type BackgroundPreviewProps = {
   background: BackgroundDef;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "tile";
 };
 
 const SIZE_CLASS = {
   sm: "h-14 w-20",
   md: "h-20 w-28",
   lg: "h-24 w-full",
+  tile: "h-14 w-14 sm:h-16 sm:w-16",
 };
 
 type Particle = {
@@ -218,33 +219,33 @@ function renderSceneContent(sceneId: string, isFull: boolean) {
               }}
             />
           ))}
-          {/* near-sky: shooting stars — right → left, shared path tilt */}
+          {/* near-sky: shooting stars — upper-right → lower-left diagonal */}
           <span
             className="bg-fx-shooting-star"
             style={{
-              top: isFull ? "16%" : "14%",
-              width: isFull ? 64 : 40,
-              animationDelay: "0.8s",
-              animationDuration: "9s",
+              top: isFull ? "10%" : "8%",
+              width: isFull ? 72 : 44,
+              animationDelay: "1.2s",
+              animationDuration: "16s",
             }}
           />
           <span
             className="bg-fx-shooting-star"
             style={{
-              top: isFull ? "28%" : "24%",
-              width: isFull ? 48 : 32,
-              animationDelay: "4.6s",
-              animationDuration: "9s",
+              top: isFull ? "22%" : "18%",
+              width: isFull ? 56 : 36,
+              animationDelay: "7.5s",
+              animationDuration: "17s",
             }}
           />
           {isFull && (
             <span
               className="bg-fx-shooting-star"
               style={{
-                top: "11%",
-                width: 40,
-                animationDelay: "7.2s",
-                animationDuration: "9s",
+                top: "6%",
+                width: 48,
+                animationDelay: "12.8s",
+                animationDuration: "18s",
               }}
             />
           )}

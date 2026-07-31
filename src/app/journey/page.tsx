@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { JourneyMap } from "@/components/JourneyMap";
 import { PotionBadge } from "@/components/PotionBadge";
 import { PotionIcon } from "@/components/PotionIcon";
 import {
@@ -19,13 +20,9 @@ import {
   isUndergroundUnlocked,
   REALM_LABELS,
   SURFACE_TERRAIN_ORDER,
-  TERRAIN_LABELS,
   UNDERGROUND_TERRAIN_ORDER,
   type JourneyMilestone,
   type JourneyRealm,
-  type JourneyTerrain,
-  type SurfaceTerrain,
-  type UndergroundTerrain,
 } from "@/lib/journey";
 import { getPotionBalance } from "@/lib/potion";
 import {
@@ -35,40 +32,11 @@ import {
   type RootState,
 } from "@/lib/root-strength";
 
-const SURFACE_STYLES: Record<
-  SurfaceTerrain,
-  { band: string; heading: string }
-> = {
-  hill: { band: "bg-[#f5ecd9]/70", heading: "text-[#b08d4f]" },
-  meadow: { band: "bg-[#e7f0e0]/70", heading: "text-[#6d8a5e]" },
-  forest: { band: "bg-[#dcebd7]/80", heading: "text-[#3d5235]" },
-};
-
-const UNDERGROUND_STYLES: Record<
-  UndergroundTerrain,
-  { band: string; heading: string }
-> = {
-  soil: { band: "bg-[#e8dfd0]/80", heading: "text-[#8a7355]" },
-  cave: { band: "bg-[#d9d0c4]/85", heading: "text-[#6b5c4a]" },
-  ruins: { band: "bg-[#cfc4b4]/90", heading: "text-[#5a4d3d]" },
-  abyss: { band: "bg-[#b8ad9c]/95", heading: "text-[#3f352a]" },
-};
-
 const QUEST_ICONS: Record<DailyQuestId, string> = {
   chat: "💬",
   water: "💧",
   root: "🌿",
 };
-
-function terrainStyle(
-  realm: JourneyRealm,
-  terrain: JourneyTerrain,
-): { band: string; heading: string } {
-  if (realm === "underground") {
-    return UNDERGROUND_STYLES[terrain as UndergroundTerrain];
-  }
-  return SURFACE_STYLES[terrain as SurfaceTerrain];
-}
 
 export default function JourneyPage() {
   const [realm, setRealm] = useState<JourneyRealm>("surface");
@@ -113,41 +81,23 @@ export default function JourneyPage() {
     setSelectedMemory(null);
   }, [realm]);
 
-  const terrainOrder =
-    realm === "underground" ? UNDERGROUND_TERRAIN_ORDER : SURFACE_TERRAIN_ORDER;
-
   const nextTargetId = useMemo(() => {
     return milestones.find((m) => !m.achieved)?.id ?? null;
   }, [milestones]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<JourneyTerrain, JourneyMilestone[]>();
-    for (const terrain of terrainOrder) map.set(terrain, []);
-    for (const milestone of milestones) {
-      map.get(milestone.terrain)?.push(milestone);
-    }
-    return map;
-  }, [milestones, terrainOrder]);
-
-  /** Bottom-to-top path: earliest milestones align from the visual bottom upward. */
-  const milestoneAlignById = useMemo(() => {
-    const chronological: JourneyMilestone[] = [];
-    for (const terrain of terrainOrder) {
-      chronological.push(...(grouped.get(terrain) ?? []));
-    }
-    const map = new Map<string, string>();
-    chronological.forEach((milestone, indexFromBottom) => {
-      map.set(
-        milestone.id,
-        indexFromBottom % 2 === 0
-          ? "mr-auto ml-1 sm:ml-4"
-          : "ml-auto mr-1 sm:mr-4",
-      );
-    });
-    return map;
-  }, [grouped, terrainOrder]);
-
   const achievedCount = milestones.filter((m) => m.achieved).length;
+  const currentStage = useMemo(() => {
+    const order =
+      realm === "underground"
+        ? UNDERGROUND_TERRAIN_ORDER
+        : SURFACE_TERRAIN_ORDER;
+    const focus =
+      milestones.find((m) => !m.achieved) ??
+      milestones[milestones.length - 1];
+    if (!focus) return 1;
+    const idx = order.indexOf(focus.terrain as (typeof order)[number]);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [milestones, realm]);
   const questDoneCount = questProgress
     ? DAILY_QUESTS.filter((q) => questProgress.completed[q.id]).length
     : 0;
@@ -191,7 +141,7 @@ export default function JourneyPage() {
 
   return (
     <div
-      className={`relative flex min-h-dvh flex-col transition-colors duration-500 ${
+      className={`relative flex h-dvh max-h-dvh flex-col overflow-hidden transition-colors duration-500 ${
         isUnderground ? "bg-[#f3eee6]" : "bg-[#FDFBF7]"
       }`}
     >
@@ -214,7 +164,7 @@ export default function JourneyPage() {
         )}
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pt-8">
+      <div className="relative mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pt-8">
         <header className="mb-4 flex shrink-0 items-center gap-3">
           <Link
             href="/"
@@ -235,7 +185,7 @@ export default function JourneyPage() {
         </header>
 
         {!undergroundUnlocked && !isUnderground && (
-          <div className="mb-4 rounded-2xl border border-[#d9cfc0] bg-[#efe8dc]/90 px-4 py-3">
+          <div className="mb-4 shrink-0 rounded-2xl border border-[#d9cfc0] bg-[#efe8dc]/90 px-4 py-3">
             <p className="text-sm font-semibold text-[#5a4d3d]">
               지하 여정은 아직 잠겨 있어요
             </p>
@@ -253,7 +203,7 @@ export default function JourneyPage() {
         )}
 
         {isUnderground && (
-          <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#d9cfc0] bg-[#efe8dc]/90 px-4 py-2.5">
+          <div className="mb-4 flex shrink-0 items-center justify-between rounded-2xl border border-[#d9cfc0] bg-[#efe8dc]/90 px-4 py-2.5">
             <div>
               <p className="text-[11px] font-semibold tracking-wide text-[#8a7355]">
                 ROOT LEVEL
@@ -271,9 +221,8 @@ export default function JourneyPage() {
           </div>
         )}
 
-        {/* 오늘의 여정 — 지상에서만 강조, 지하에서는 간략히 */}
         {!isUnderground && (
-          <section className="mb-4 rounded-3xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm backdrop-blur-sm">
+          <section className="mb-4 shrink-0 rounded-3xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm backdrop-blur-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div>
                 <p className="text-[11px] font-semibold tracking-[0.18em] text-[#8ba4b4]">
@@ -355,16 +304,18 @@ export default function JourneyPage() {
         )}
 
         <div
-          className={`mb-4 flex shrink-0 items-center justify-between rounded-2xl border px-4 py-2.5 ${
+          className={`mb-3 flex shrink-0 items-center justify-between rounded-2xl border px-4 py-2.5 ${
             isUnderground
               ? "border-[#d9cfc0] bg-[#efe8dc]/80"
               : "border-[#e8dcc8] bg-white/70"
           }`}
         >
-          <p className="text-xs text-[#8ba4b4]">
-            {isUnderground
-              ? "뿌리가 아래에서 위로 자라나는 길이에요"
-              : "씨앗이 아래에서 위로 자라나는 길이에요"}
+          <p
+            className={`text-xs font-semibold tracking-wide ${
+              isUnderground ? "text-[#8a7355]" : "text-[#6d8a5e]"
+            }`}
+          >
+            Stage {currentStage}
           </p>
           <p
             className={`shrink-0 text-xs font-semibold ${
@@ -375,100 +326,13 @@ export default function JourneyPage() {
           </p>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col-reverse gap-5 overflow-y-auto pb-2">
-          {terrainOrder.map((terrain) => {
-            const items = grouped.get(terrain) ?? [];
-            if (items.length === 0) return null;
-            const style = terrainStyle(realm, terrain);
-
-            return (
-              <section
-                key={terrain}
-                className={`shrink-0 rounded-3xl ${style.band} px-4 py-5`}
-              >
-                <p
-                  className={`mb-4 text-center text-xs font-bold tracking-wide ${style.heading}`}
-                >
-                  {TERRAIN_LABELS[terrain]}
-                </p>
-                <div className="relative flex flex-col-reverse gap-4">
-                  <div
-                    className={`absolute inset-y-1 left-1/2 w-0 -translate-x-1/2 border-l-2 border-dashed ${
-                      isUnderground ? "border-[#a89880]/50" : "border-white/80"
-                    }`}
-                    aria-hidden
-                  />
-                  {items.map((milestone) => {
-                    const alignClass =
-                      milestoneAlignById.get(milestone.id) ??
-                      "mr-auto ml-1 sm:ml-4";
-                    const isNext = milestone.id === nextTargetId;
-                    const isClaimed = claimedIds.has(milestone.id);
-                    const accentBorder = isUnderground
-                      ? "border-[#8a7355]"
-                      : "border-[#9caf88]";
-                    const accentRing = isUnderground
-                      ? "ring-[#c4a574]/50"
-                      : "ring-[#e8a598]/60";
-                    const accentGrad = isUnderground
-                      ? "bg-gradient-to-b from-[#a89880] to-[#8a7355]"
-                      : "bg-gradient-to-b from-[#9caf88] to-[#7a9168]";
-
-                    return (
-                      <button
-                        key={milestone.id}
-                        type="button"
-                        onClick={() => openMilestone(milestone)}
-                        className={`relative z-[1] flex w-[74%] items-center gap-3 rounded-2xl border px-3 py-2.5 text-left shadow-sm transition active:scale-95 sm:w-[64%] ${alignClass} ${
-                          milestone.achieved
-                            ? `${accentBorder} bg-white/95`
-                            : "border-[#e8dcc8]/80 bg-white/60"
-                        } ${isNext ? `ring-2 ${accentRing}` : ""}`}
-                      >
-                        <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base ${
-                            milestone.achieved
-                              ? `${accentGrad} text-white`
-                              : "bg-[#ede8df] text-[#b8b2a6]"
-                          }`}
-                          aria-hidden
-                        >
-                          {milestone.achieved
-                            ? isClaimed || milestone.potionReward === 0
-                              ? "✓"
-                              : "🎁"
-                            : "🔒"}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span
-                            className={`block truncate text-sm font-semibold ${
-                              milestone.achieved
-                                ? "text-[#4a5248]"
-                                : "text-[#b0aa9e]"
-                            }`}
-                          >
-                            {milestone.title}
-                          </span>
-                          {isNext && (
-                            <span
-                              className={`block text-[11px] font-medium ${
-                                isUnderground
-                                  ? "text-[#a89880]"
-                                  : "text-[#e8a598]"
-                              }`}
-                            >
-                              다음 목표예요
-                            </span>
-                          )}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+        <JourneyMap
+          milestones={milestones}
+          realm={realm}
+          claimedIds={claimedIds}
+          nextTargetId={nextTargetId}
+          onSelect={openMilestone}
+        />
       </div>
 
       {/* 지상 / 지하 토글 — 화면 하단 고정 */}

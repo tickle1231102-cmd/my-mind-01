@@ -107,12 +107,12 @@ export function WateringCan({ className = "" }: WateringCanProps) {
         >
           <defs>
             <linearGradient id="wcBody" x1="20" y1="14" x2="52" y2="44">
-              <stop offset="0%" stopColor="#b8d4c0" />
-              <stop offset="100%" stopColor="#8fad7a" />
+              <stop offset="0%" stopColor="#FFE08A" />
+              <stop offset="100%" stopColor="#F0C04A" />
             </linearGradient>
             <linearGradient id="wcSpout" x1="10" y1="22" x2="28" y2="34">
-              <stop offset="0%" stopColor="#a3bcc9" />
-              <stop offset="100%" stopColor="#8ba4b4" />
+              <stop offset="0%" stopColor="#F6D56B" />
+              <stop offset="100%" stopColor="#E0B84A" />
             </linearGradient>
           </defs>
 
@@ -142,23 +142,23 @@ export function WateringCan({ className = "" }: WateringCanProps) {
             {/* handle */}
             <path
               d="M44 18 C54 16 58 24 56 32 C54 38 48 40 44 38"
-              stroke="#7a9168"
+              stroke="#D4A017"
               strokeWidth="3.2"
               strokeLinecap="round"
               fill="none"
             />
             {/* body */}
             <ellipse cx="36" cy="30" rx="14" ry="12" fill="url(#wcBody)" />
-            <ellipse cx="36" cy="28" rx="10" ry="7" fill="#d4e4cc" opacity="0.45" />
+            <ellipse cx="36" cy="28" rx="10" ry="7" fill="#FFF3C4" opacity="0.55" />
             {/* rim */}
-            <ellipse cx="36" cy="20" rx="11" ry="4" fill="#a8be92" />
-            <ellipse cx="36" cy="19.2" rx="8" ry="2.4" fill="#e8f0e4" opacity="0.55" />
+            <ellipse cx="36" cy="20" rx="11" ry="4" fill="#E8C04A" />
+            <ellipse cx="36" cy="19.2" rx="8" ry="2.4" fill="#FFF8DC" opacity="0.65" />
             {/* spout */}
             <path
               d="M24 26 C18 24 12 26 10 30 C9 33 12 35 16 34 C20 33 24 30 26 28Z"
               fill="url(#wcSpout)"
             />
-            <ellipse cx="11" cy="31" rx="2.2" ry="1.6" fill="#6d8a8a" />
+            <ellipse cx="11" cy="31" rx="2.2" ry="1.6" fill="#C9A227" />
             {/* cute face on can */}
             <circle cx="33" cy="30" r="1.1" fill="#5a4638" />
             <circle cx="39" cy="30" r="1.1" fill="#5a4638" />

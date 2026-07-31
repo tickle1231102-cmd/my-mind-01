@@ -280,24 +280,24 @@ a {
   }
 }
 
-/* Uniform right → left streak (slight downward tilt kept constant) */
+/* Upper-right → lower-left diagonal fall (steeper angle, slower streak) */
 @keyframes bg-shooting-star {
   0% {
-    left: 108%;
-    transform: translate3d(0, 0, 0) rotate(-12deg) scaleX(0.35);
+    left: 112%;
+    transform: translate3d(0, 0, 0) rotate(-42deg) scaleX(0.3);
     opacity: 0;
   }
-  6% {
+  4% {
     opacity: 1;
   }
-  42% {
-    left: -18%;
-    transform: translate3d(0, 14px, 0) rotate(-12deg) scaleX(1);
+  58% {
+    left: -22%;
+    transform: translate3d(0, 42vh, 0) rotate(-42deg) scaleX(1);
     opacity: 0;
   }
   100% {
-    left: -18%;
-    transform: translate3d(0, 14px, 0) rotate(-12deg) scaleX(1);
+    left: -22%;
+    transform: translate3d(0, 42vh, 0) rotate(-42deg) scaleX(1);
     opacity: 0;
   }
 }
@@ -488,7 +488,7 @@ a {
     transparent
   );
   transform-origin: center;
-  animation: bg-shooting-star 9s linear infinite;
+  animation: bg-shooting-star 16s linear infinite;
   will-change: left, transform, opacity;
 }
 

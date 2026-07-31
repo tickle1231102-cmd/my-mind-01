@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BackgroundPreview } from "@/components/BackgroundPreview";
+import {
+  CatalogCell,
+  CatalogGrid,
+  CatalogGridPanel,
+  CatalogSelectionBar,
+} from "@/components/CatalogGrid";
 import { PotSkinPreview } from "@/components/PotSkinPreview";
 import { PotionBadge } from "@/components/PotionBadge";
-import { PotionIcon } from "@/components/PotionIcon";
 import { getBackgroundById } from "@/lib/backgrounds";
 import {
   getOwnedItemKeys,
@@ -16,6 +21,7 @@ import {
 import { getPotionBalance, POTION_CHANGE_EVENT } from "@/lib/potion";
 import {
   CATEGORY_LABELS,
+  getStoreItemById,
   getStoreItemsByCategory,
   type StoreCategory,
   type StoreItem,
@@ -23,94 +29,30 @@ import {
 
 const V1_CATEGORIES: StoreCategory[] = ["decorating", "sensory"];
 
-function StoreItemCard({
-  item,
-  owned,
-  balance,
-  onPurchase,
-  purchasing,
-}: {
-  item: StoreItem;
-  owned: boolean;
-  balance: number;
-  onPurchase: (id: string) => void;
-  purchasing: string | null;
-}) {
-  const canBuy =
-    !owned && !item.comingSoon && balance >= item.price && purchasing !== item.id;
-  const bgDef =
-    item.kind === "background" ? getBackgroundById(item.unlockId) : undefined;
-
+function ItemPreview({ item }: { item: StoreItem }) {
+  if (item.kind === "background") {
+    const bgDef = getBackgroundById(item.unlockId);
+    if (bgDef) {
+      return (
+        <BackgroundPreview
+          background={bgDef}
+          size="tile"
+          className="!rounded-2xl shadow-sm"
+        />
+      );
+    }
+  }
+  if (item.kind === "potSkin") {
+    return (
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#e8dcc8] bg-white shadow-sm sm:h-16 sm:w-16">
+        <PotSkinPreview skinId={item.unlockId} className="h-11 w-10" />
+      </span>
+    );
+  }
   return (
-    <article className="flex gap-3 rounded-2xl border border-[#e8e0d4] bg-white/90 p-3.5 shadow-sm">
-      <div className="shrink-0">
-        {item.kind === "background" && bgDef ? (
-          <BackgroundPreview background={bgDef} size="md" />
-        ) : item.kind === "potSkin" ? (
-          <div className="flex h-20 w-28 items-center justify-center rounded-xl border border-[#e8dcc8] bg-[#f5f0e8]/80">
-            <PotSkinPreview skinId={item.unlockId} />
-          </div>
-        ) : (
-          <div className="flex h-20 w-28 items-center justify-center rounded-xl border border-[#e8dcc8] bg-[#f0ebe3] text-2xl">
-            🎵
-          </div>
-        )}
-      </div>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-bold text-[#4a5248]">{item.name}</h3>
-          {owned && (
-            <span className="shrink-0 rounded-full bg-[#9caf88]/20 px-2 py-0.5 text-[10px] font-semibold text-[#6d8a5e]">
-              보유중
-            </span>
-          )}
-          {item.comingSoon && !owned && (
-            <span className="shrink-0 rounded-full bg-[#e8e0d4]/80 px-2 py-0.5 text-[10px] font-semibold text-[#8ba4b4]">
-              준비중
-            </span>
-          )}
-        </div>
-        <p className="mt-1 text-xs leading-relaxed text-[#6d655c]">
-          {item.description}
-        </p>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <span className="inline-flex items-center gap-1 text-sm font-bold text-[#4a5248]">
-            <PotionIcon className="h-4 w-4 text-[#c98fd6]" />
-            {item.price}
-          </span>
-          {owned ? (
-            <Link
-              href="/item"
-              className="rounded-xl border border-[#9caf88]/40 bg-[#eef4e8] px-3 py-1.5 text-xs font-semibold text-[#6d8a5e] transition hover:bg-[#e4eedc]"
-            >
-              장착하기
-            </Link>
-          ) : item.comingSoon ? (
-            <button
-              type="button"
-              disabled
-              className="cursor-not-allowed rounded-xl border border-[#e8e0d4] bg-[#f5f0e8] px-3 py-1.5 text-xs font-semibold text-[#b5aea3]"
-            >
-              준비중
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={!canBuy}
-              onClick={() => onPurchase(item.id)}
-              className="rounded-xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {purchasing === item.id
-                ? "구매 중…"
-                : balance < item.price
-                  ? "포션 부족"
-                  : "구매"}
-            </button>
-          )}
-        </div>
-      </div>
-    </article>
+    <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#e8dcc8] bg-white text-2xl shadow-sm sm:h-16 sm:w-16">
+      🎵
+    </span>
   );
 }
 
@@ -118,6 +60,7 @@ export default function StorePage() {
   const [balance, setBalance] = useState(0);
   const [ownedKeys, setOwnedKeys] = useState<string[]>([]);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
@@ -151,27 +94,40 @@ export default function StorePage() {
     }));
   }, []);
 
-  function handlePurchase(itemId: string) {
-    setPurchasing(itemId);
-    const result = purchase(itemId);
+  useEffect(() => {
+    if (selectedId) return;
+    const first = itemsByCategory[0]?.items[0];
+    if (first) setSelectedId(first.id);
+  }, [itemsByCategory, selectedId]);
+
+  function isOwned(item: StoreItem) {
+    return isStoreItemOwned(item) || ownedKeys.includes(`item:${item.id}`);
+  }
+
+  const selected = selectedId ? getStoreItemById(selectedId) : undefined;
+  const selectedOwned = selected ? isOwned(selected) : false;
+  const canBuy =
+    !!selected &&
+    !selectedOwned &&
+    !selected.comingSoon &&
+    balance >= selected.price &&
+    purchasing !== selected.id;
+
+  function handlePurchase() {
+    if (!selected || !canBuy) return;
+    setPurchasing(selected.id);
+    const result = purchase(selected.id);
     setPurchasing(null);
 
     if (result.success) {
       setBalance(result.balance);
       setOwnedKeys(getOwnedItemKeys());
-      const item = getStoreItemsByCategory("decorating")
-        .concat(getStoreItemsByCategory("sensory"))
-        .find((i) => i.id === itemId);
-      setToast(`${item?.name ?? "아이템"}을(를) 구매했어요!`);
+      setToast(`${selected.name}을(를) 구매했어요!`);
       window.setTimeout(() => setToast(null), 1800);
     } else if (result.reason === "insufficient") {
       setToast("포션이 부족해요");
       window.setTimeout(() => setToast(null), 1600);
     }
-  }
-
-  function isOwned(item: StoreItem) {
-    return isStoreItemOwned(item) || ownedKeys.includes(`item:${item.id}`);
   }
 
   return (
@@ -194,7 +150,7 @@ export default function StorePage() {
       )}
 
       <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
-        <header className="mb-5 flex items-center gap-3">
+        <header className="mb-4 flex items-center gap-3">
           <Link
             href="/"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white/90 text-lg text-[#4a5248] shadow-sm transition hover:bg-white"
@@ -211,31 +167,85 @@ export default function StorePage() {
           <PotionBadge href="/store" />
         </header>
 
-        <p className="mb-5 text-sm leading-relaxed text-[#6d655c]">
-          여정과 일일 퀘스트로 모은{" "}
-          <span className="font-semibold text-[#6d8a5e]">포션</span>으로 정원을
-          꾸며 보세요.
+        <p className="mb-4 text-sm leading-relaxed text-[#6d655c]">
+          아이콘을 고른 뒤 포션으로 구매해 정원을 꾸며 보세요.
         </p>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           {itemsByCategory.map(({ category, label, items }) => (
             <section key={category}>
-              <h2 className="mb-3 text-sm font-bold text-[#6d8a5e]">{label}</h2>
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <StoreItemCard
-                    key={item.id}
-                    item={item}
-                    owned={isOwned(item)}
-                    balance={balance}
-                    onPurchase={handlePurchase}
-                    purchasing={purchasing}
-                  />
-                ))}
-              </div>
+              <h2 className="mb-2 text-sm font-bold text-[#6d8a5e]">{label}</h2>
+              <CatalogGridPanel>
+                <CatalogGrid>
+                  {items.map((item) => {
+                    const owned = isOwned(item);
+                    return (
+                      <CatalogCell
+                        key={item.id}
+                        selected={selectedId === item.id}
+                        onClick={() => setSelectedId(item.id)}
+                        preview={<ItemPreview item={item} />}
+                        price={item.price}
+                        aria-label={`${item.name}, 포션 ${item.price}${owned ? ", 보유중" : item.comingSoon ? ", 준비중" : ""}`}
+                        badge={
+                          owned ? (
+                            <span className="text-[10px] font-bold text-[#6d8a5e]">
+                              ✓
+                            </span>
+                          ) : item.comingSoon ? (
+                            <span className="text-[9px] font-bold text-[#8ba4b4]">
+                              …
+                            </span>
+                          ) : null
+                        }
+                      />
+                    );
+                  })}
+                </CatalogGrid>
+              </CatalogGridPanel>
             </section>
           ))}
         </div>
+
+        {selected && (
+          <CatalogSelectionBar
+            title={selected.name}
+            subtitle={
+              selectedOwned
+                ? "보유 중 · 아이템 보관함에서 장착할 수 있어요"
+                : selected.comingSoon
+                  ? "곧 만나볼 수 있어요"
+                  : selected.description
+            }
+            action={
+              selectedOwned ? (
+                <Link
+                  href="/item"
+                  className="shrink-0 rounded-xl border border-[#9caf88]/40 bg-[#eef4e8] px-3.5 py-2 text-xs font-bold text-[#6d8a5e] transition hover:bg-[#e4eedc] active:scale-95"
+                >
+                  장착하기
+                </Link>
+              ) : selected.comingSoon ? (
+                <span className="shrink-0 rounded-xl border border-[#e8e0d4] bg-[#f5f0e8] px-3.5 py-2 text-xs font-semibold text-[#b5aea3]">
+                  준비중
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!canBuy}
+                  onClick={handlePurchase}
+                  className="shrink-0 rounded-xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {purchasing === selected.id
+                    ? "구매 중…"
+                    : balance < selected.price
+                      ? "포션 부족"
+                      : "구매"}
+                </button>
+              )
+            }
+          />
+        )}
       </div>
     </div>
   );
