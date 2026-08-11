@@ -10,7 +10,7 @@ import { RootStrengthenMode } from "@/components/RootStrengthenMode";
 import { BackgroundSceneOverlay } from "@/components/BackgroundPreview";
 import { SproutCharacter } from "@/components/SproutCharacter";
 import { WateringCan } from "@/components/WateringCan";
-import { formatDateKey, saveDayMessages } from "@/lib/chat-history";
+import { formatDateKey, getDayMessages, saveDayMessages } from "@/lib/chat-history";
 import { completeDailyQuest } from "@/lib/daily-quests";
 import { getFallbackReply } from "@/lib/healing-bot";
 import {
@@ -28,7 +28,12 @@ import {
   nextBubbleDelayMs,
   pickPotBubble,
 } from "@/lib/pot-bubbles";
-import { getPlantState, setPlantState } from "@/lib/plant-state";
+import { CLOUD_SYNC_EVENT } from "@/lib/cloud-sync";
+import {
+  getPlantState,
+  PLANT_STATE_CHANGE_EVENT,
+  setPlantState,
+} from "@/lib/plant-state";
 import { getRootState, type RootState } from "@/lib/root-strength";
 import {
   detectPlantMood,
@@ -258,6 +263,7 @@ export default function Home() {
   const [potBubble, setPotBubble] = useState<string | null>(null);
   const [potBubbleLeaving, setPotBubbleLeaving] = useState(false);
   const [plantHydrated, setPlantHydrated] = useState(false);
+  const [messagesHydrated, setMessagesHydrated] = useState(false);
   const [questToast, setQuestToast] = useState<string | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -289,8 +295,26 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!messagesHydrated) return;
     saveDayMessages(formatDateKey(new Date()), messages);
-  }, [messages]);
+  }, [messages, messagesHydrated]);
+
+  useEffect(() => {
+    function loadTodayMessages() {
+      const saved = getDayMessages(formatDateKey(new Date()));
+      if (saved.length > 0) {
+        setMessages(saved as Message[]);
+        const maxId = saved.reduce((max, m) => Math.max(max, m.id), 0);
+        setNextId(maxId + 1);
+      }
+      setMessagesHydrated(true);
+    }
+    loadTodayMessages();
+    window.addEventListener(CLOUD_SYNC_EVENT, loadTodayMessages);
+    return () => {
+      window.removeEventListener(CLOUD_SYNC_EVENT, loadTodayMessages);
+    };
+  }, []);
 
   useEffect(() => {
     setRootState(getRootState());
@@ -327,6 +351,20 @@ export default function Home() {
     setHp(saved.hp);
     setWiltedByNegative(saved.wiltedByNegative);
     setPlantHydrated(true);
+
+    function syncFromStorage() {
+      const next = getPlantState();
+      setLevel(next.level);
+      setHp(next.hp);
+      setWiltedByNegative(next.wiltedByNegative);
+    }
+
+    window.addEventListener(CLOUD_SYNC_EVENT, syncFromStorage);
+    window.addEventListener(PLANT_STATE_CHANGE_EVENT, syncFromStorage);
+    return () => {
+      window.removeEventListener(CLOUD_SYNC_EVENT, syncFromStorage);
+      window.removeEventListener(PLANT_STATE_CHANGE_EVENT, syncFromStorage);
+    };
   }, []);
 
   useEffect(() => {

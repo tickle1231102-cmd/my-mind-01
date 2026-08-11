@@ -9,6 +9,8 @@ export type StoredMessage = {
 
 const STORAGE_KEY = "healing-garden-chat-logs";
 
+export const CHAT_LOGS_CHANGE_EVENT = "healing-garden-chat-logs-changed";
+
 export function formatDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -42,9 +44,27 @@ function readAllLogs(): Record<string, StoredMessage[]> {
   }
 }
 
-function writeAllLogs(logs: Record<string, StoredMessage[]>) {
+function writeAllLogs(
+  logs: Record<string, StoredMessage[]>,
+  options?: { skipCloud?: boolean },
+) {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+  window.dispatchEvent(new Event(CHAT_LOGS_CHANGE_EVENT));
+  if (!options?.skipCloud) {
+    void import("@/lib/cloud-sync").then((m) => m.scheduleCloudSave());
+  }
+}
+
+export function getAllChatLogs(): Record<string, StoredMessage[]> {
+  return readAllLogs();
+}
+
+export function replaceAllChatLogs(
+  logs: Record<string, StoredMessage[]>,
+  options?: { skipCloud?: boolean },
+) {
+  writeAllLogs(logs, options);
 }
 
 export function saveDayMessages(dateKey: string, messages: StoredMessage[]) {

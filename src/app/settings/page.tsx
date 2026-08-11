@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { useBgm } from "@/components/BgmProvider";
 import { useUiClickSound } from "@/components/UiClickSoundProvider";
 
@@ -10,6 +11,7 @@ const POT_NAME_KEY = "healing-garden-pot-name";
 const MAX_NAME_LENGTH = 10;
 
 export default function SettingsPage() {
+  const { user, loading: authLoading, signOut } = useAuth();
   const { enabled: bgmEnabled, toggle: toggleBgm } = useBgm();
   const { enabled: clickSoundEnabled, toggle: toggleClickSound } =
     useUiClickSound();
@@ -17,6 +19,7 @@ export default function SettingsPage() {
   const [potName, setPotName] = useState("");
   const [savedToast, setSavedToast] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     setNickname(window.localStorage.getItem(NICKNAME_KEY)?.trim() ?? "");
@@ -92,6 +95,45 @@ export default function SettingsPage() {
         </header>
 
         <div className="space-y-4">
+          <section className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm">
+            <p className="text-sm font-semibold text-[#4a5248]">계정</p>
+            <p className="mt-1 text-xs leading-relaxed text-[#8ba4b4]">
+              로그인하면 레벨·HP·채팅이 클라우드에 저장돼요
+            </p>
+            {authLoading ? (
+              <p className="mt-3 text-sm text-[#8ba4b4]">확인 중…</p>
+            ) : user ? (
+              <div className="mt-3 space-y-3">
+                <p className="truncate rounded-2xl bg-[#f5f0e8] px-3 py-2 text-sm text-[#4a5248]">
+                  {user.email ?? user.id}
+                </p>
+                <button
+                  type="button"
+                  disabled={signingOut}
+                  onClick={async () => {
+                    setSigningOut(true);
+                    try {
+                      await signOut();
+                      showToast("로그아웃했어요");
+                    } finally {
+                      setSigningOut(false);
+                    }
+                  }}
+                  className="w-full rounded-xl border border-[#e8dcc8] bg-white px-4 py-2.5 text-sm font-semibold text-[#4a5248] transition hover:bg-[#FDFBF7] disabled:opacity-50"
+                >
+                  {signingOut ? "로그아웃 중…" : "로그아웃"}
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="mt-3 flex w-full items-center justify-center rounded-xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:from-[#8fad7a] hover:to-[#6d8a5e]"
+              >
+                로그인 / 회원가입
+              </Link>
+            )}
+          </section>
+
           <form
             onSubmit={handleSaveNickname}
             className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm"

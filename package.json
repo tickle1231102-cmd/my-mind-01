@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.3",
     "@vercel/oidc": "^3.8.0",
     "ai": "^7.0.22",
     "next": "16.2.9",

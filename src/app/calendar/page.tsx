@@ -13,6 +13,7 @@ import {
   parseDateKey,
   type StoredMessage,
 } from "@/lib/chat-history";
+import { CLOUD_SYNC_EVENT } from "@/lib/cloud-sync";
 import {
   getMoodForDate,
   getMoodsForMonth,
@@ -84,6 +85,17 @@ export default function CalendarPage() {
   useEffect(() => {
     refreshMonthMoods();
   }, [viewYear, viewMonth]);
+
+  useEffect(() => {
+    function onCloudSync() {
+      refreshMonthMoods();
+      if (selectedDateKey && !isToday(selectedDateKey)) {
+        setSelectedMessages(getDayMessages(selectedDateKey));
+      }
+    }
+    window.addEventListener(CLOUD_SYNC_EVENT, onCloudSync);
+    return () => window.removeEventListener(CLOUD_SYNC_EVENT, onCloudSync);
+  }, [selectedDateKey]);
 
   useEffect(() => {
     if (!selectedDateKey || isToday(selectedDateKey)) {

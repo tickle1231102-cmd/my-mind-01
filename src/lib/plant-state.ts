@@ -1,7 +1,6 @@
 /**
  * 홈 화면 화분(새싹)의 레벨/HP를 저장한다.
- * 기존에는 React state로만 존재해 새로고침 시 사라졌는데,
- * Journey 지도가 실제 성장 이력을 반영하려면 영속화가 필요하다.
+ * 게스트: localStorage / 로그인: localStorage + Supabase mind_game_state
  */
 
 export type PlantState = {
@@ -13,6 +12,8 @@ export type PlantState = {
 const PLANT_STATE_KEY = "healing-garden-plant-state";
 
 const DEFAULT_STATE: PlantState = { level: 0, hp: 0, wiltedByNegative: false };
+
+export const PLANT_STATE_CHANGE_EVENT = "healing-garden-plant-state-changed";
 
 export function getPlantState(): PlantState {
   if (typeof window === "undefined") return DEFAULT_STATE;
@@ -33,7 +34,14 @@ export function getPlantState(): PlantState {
   }
 }
 
-export function setPlantState(state: PlantState) {
+export function setPlantState(
+  state: PlantState,
+  options?: { skipCloud?: boolean },
+) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(PLANT_STATE_KEY, JSON.stringify(state));
+  window.dispatchEvent(new Event(PLANT_STATE_CHANGE_EVENT));
+  if (!options?.skipCloud) {
+    void import("@/lib/cloud-sync").then((m) => m.scheduleCloudSave());
+  }
 }
