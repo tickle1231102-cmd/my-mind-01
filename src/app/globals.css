@@ -267,6 +267,60 @@ a {
     );
 }
 
+.bg-scene-sunset-sea {
+  background:
+    radial-gradient(ellipse 50% 36% at 50% 38%, rgba(255, 210, 130, 0.55), transparent 62%),
+    radial-gradient(ellipse 70% 30% at 20% 18%, rgba(255, 160, 120, 0.35), transparent 70%),
+    linear-gradient(
+      180deg,
+      #f6b48a 0%,
+      #e87868 22%,
+      #c45a78 42%,
+      #6a6a88 60%,
+      #2c3c58 78%,
+      #1a2840 100%
+    );
+}
+
+.bg-scene-misty-forest {
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(200, 224, 210, 0.4), transparent 58%),
+    linear-gradient(
+      180deg,
+      #8aada0 0%,
+      #5a7a68 26%,
+      #3a5648 52%,
+      #243830 76%,
+      #14221c 100%
+    );
+}
+
+.bg-scene-lavender-hill {
+  background:
+    radial-gradient(ellipse 65% 35% at 50% 6%, rgba(255, 255, 255, 0.6), transparent 58%),
+    radial-gradient(ellipse 50% 28% at 80% 40%, rgba(196, 160, 220, 0.4), transparent 70%),
+    linear-gradient(
+      180deg,
+      #efe4f6 0%,
+      #d8c4ea 24%,
+      #c4a8d8 48%,
+      #9a78b8 70%,
+      #7a9168 100%
+    );
+}
+
+.bg-scene-candle-study {
+  background:
+    radial-gradient(ellipse 42% 48% at 62% 58%, rgba(255, 186, 110, 0.32), transparent 62%),
+    linear-gradient(
+      180deg,
+      #241c18 0%,
+      #342820 28%,
+      #43362c 55%,
+      #534436 100%
+    );
+}
+
 /* ── Store background ambient motion + depth layers ── */
 @keyframes bg-star-twinkle {
   0%,
@@ -618,6 +672,117 @@ a {
   pointer-events: none;
 }
 
+@keyframes bg-wave-drift {
+  0%,
+  100% {
+    transform: translate3d(-5%, 0, 0);
+  }
+  50% {
+    transform: translate3d(5%, 1.5%, 0);
+  }
+}
+
+.bg-fx-wave {
+  position: absolute;
+  border-radius: 50% 50% 0 0;
+  animation: bg-wave-drift ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bg-sun-pulse {
+  0%,
+  100% {
+    opacity: 0.88;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+.bg-fx-sun {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 38% 38%, #fff8d8, #ffb45c 55%, #ff7a40 100%);
+  box-shadow: 0 0 36px rgba(255, 176, 80, 0.55);
+  animation: bg-sun-pulse 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.bg-fx-firefly {
+  position: absolute;
+  border-radius: 9999px;
+  background: #e8f8b0;
+  box-shadow: 0 0 8px rgba(210, 240, 120, 0.85);
+  animation: bg-star-twinkle ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bg-dust-rise {
+  0% {
+    top: 78%;
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.55;
+  }
+  100% {
+    top: 10%;
+    transform: translate3d(var(--bg-drift, 8px), 0, 0);
+    opacity: 0;
+  }
+}
+
+.bg-fx-dust {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(255, 236, 200, 0.7);
+  animation: bg-dust-rise linear infinite;
+  pointer-events: none;
+}
+
+@keyframes bg-candle-flicker {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  70% {
+    opacity: 0.82;
+    transform: scale(0.96);
+  }
+}
+
+.bg-fx-candle {
+  border-radius: 9999px 9999px 40% 40%;
+  background: radial-gradient(circle at 50% 30%, #fff6d0, #ffb040 55%, #e87840 100%);
+  box-shadow: 0 0 16px rgba(255, 180, 80, 0.7);
+  animation: bg-candle-flicker 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bg-curtain-sway {
+  0%,
+  100% {
+    transform: skewX(0deg);
+  }
+  50% {
+    transform: skewX(2deg);
+  }
+}
+
+.bg-fx-curtain {
+  transform-origin: top center;
+  animation: bg-curtain-sway 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .bg-fx-window-frame {
   position: absolute;
   inset: 0;
@@ -655,7 +820,13 @@ a {
   .bg-fx-butterfly,
   .bg-fx-bird,
   .bg-fx-grass-blade,
-  .bg-fx-bloom {
+  .bg-fx-bloom,
+  .bg-fx-wave,
+  .bg-fx-sun,
+  .bg-fx-firefly,
+  .bg-fx-dust,
+  .bg-fx-candle,
+  .bg-fx-curtain {
     animation: none !important;
   }
 
@@ -677,6 +848,11 @@ a {
   .bg-fx-snowflake {
     top: 32% !important;
     opacity: 0.7;
+  }
+
+  .bg-fx-dust {
+    top: 42% !important;
+    opacity: 0.45;
   }
 
   .bg-fx-shooting-star,

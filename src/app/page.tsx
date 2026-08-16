@@ -584,6 +584,8 @@ export default function Home() {
     if (potBubbleLeaving || !potBubble) return;
     playBubblePopSound();
     ensurePlaying();
+    applyHpGain(HP_POT_GAIN);
+    showQuestRewardToast(completeDailyQuest("water"));
     dismissPotBubbleRef.current?.();
   }
 
@@ -1116,6 +1118,42 @@ export default function Home() {
               )}
               {levelUpBurst != null && <LevelUpBurst level={levelUpBurst} />}
 
+              {(potBubble || potBubbleLeaving) &&
+                !showPotTouchGuide &&
+                !potGuideLeaving && (
+                  <div
+                    className={`absolute left-1/2 top-2 z-20 w-[min(13.5rem,70vw)] -translate-x-1/2 sm:top-3 ${
+                      potBubbleLeaving ? "pot-bubble-leave" : "pot-bubble-enter"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      data-no-click-sound
+                      onClick={handlePotBubbleDismiss}
+                      disabled={potBubbleLeaving}
+                      aria-label={
+                        potName
+                          ? `${potName} 말풍선을 눌러 물 주기`
+                          : "말풍선을 눌러 물 주기"
+                      }
+                      className="relative w-full cursor-pointer touch-manipulation rounded-2xl border border-[#e8dcc8] bg-white/95 px-3 py-2 text-center shadow-md backdrop-blur-sm transition active:scale-[0.97] disabled:cursor-default"
+                    >
+                      {potName && (
+                        <p className="mb-0.5 text-[10px] font-semibold tracking-wide text-[#8ba4b4]">
+                          {potName}
+                        </p>
+                      )}
+                      <p className="text-[13px] leading-snug font-medium text-[#4a5248] sm:text-sm">
+                        {potBubble}
+                      </p>
+                      <span
+                        className="absolute left-1/2 top-full -mt-px h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-r border-b border-[#e8dcc8] bg-white/95"
+                        aria-hidden
+                      />
+                    </button>
+                  </div>
+                )}
+
               <div
                 className={`absolute inset-x-0 z-[1] flex justify-center ${
                   isSeedStage
@@ -1156,40 +1194,6 @@ export default function Home() {
                       </span>
                     </div>
                   )}
-
-                  {(potBubble || potBubbleLeaving) &&
-                    !showPotTouchGuide &&
-                    !potGuideLeaving && (
-                      <div
-                        className={`absolute left-1/2 z-20 w-[min(15.5rem,78vw)] -translate-x-1/2 ${
-                          isSeedStage
-                            ? "-top-12 sm:-top-14"
-                            : "-top-[4.25rem] sm:-top-[4.75rem]"
-                        } ${potBubbleLeaving ? "pot-bubble-leave" : "pot-bubble-enter"}`}
-                      >
-                        <button
-                          type="button"
-                          data-no-click-sound
-                          onClick={handlePotBubbleDismiss}
-                          disabled={potBubbleLeaving}
-                          aria-label="말풍선 닫기"
-                          className="relative w-full cursor-pointer touch-manipulation rounded-2xl border border-[#e8dcc8] bg-white/95 px-3.5 py-2.5 text-center shadow-md backdrop-blur-sm transition active:scale-[0.97] disabled:cursor-default"
-                        >
-                          {potName && (
-                            <p className="mb-0.5 text-[10px] font-semibold tracking-wide text-[#8ba4b4]">
-                              {potName}
-                            </p>
-                          )}
-                          <p className="text-[13px] leading-snug font-medium text-[#4a5248] sm:text-sm">
-                            {potBubble}
-                          </p>
-                          <span
-                            className="absolute left-1/2 top-full -mt-px h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-r border-b border-[#e8dcc8] bg-white/95"
-                            aria-hidden
-                          />
-                        </button>
-                      </div>
-                    )}
 
                   <button
                     type="button"

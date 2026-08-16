@@ -11,7 +11,11 @@ export type BackgroundId =
   | "night-sky"
   | "rainy-window"
   | "cherry-garden"
-  | "first-snow";
+  | "first-snow"
+  | "sunset-sea"
+  | "misty-forest"
+  | "lavender-hill"
+  | "candle-study";
 
 export type BackgroundDef = {
   id: BackgroundId;
@@ -65,6 +69,26 @@ export const BACKGROUNDS: BackgroundDef[] = [
     id: "first-snow",
     label: "첫눈",
     sceneClass: "bg-scene-first-snow",
+  },
+  {
+    id: "sunset-sea",
+    label: "노을 바다",
+    sceneClass: "bg-scene-sunset-sea",
+  },
+  {
+    id: "misty-forest",
+    label: "안개 숲",
+    sceneClass: "bg-scene-misty-forest",
+  },
+  {
+    id: "lavender-hill",
+    label: "라벤더 언덕",
+    sceneClass: "bg-scene-lavender-hill",
+  },
+  {
+    id: "candle-study",
+    label: "촛불 서재",
+    sceneClass: "bg-scene-candle-study",
   },
 ];
 

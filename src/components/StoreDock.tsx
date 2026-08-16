@@ -6,8 +6,8 @@ import {
   CatalogCell,
   CatalogGrid,
   CatalogGridPanel,
-  CatalogSelectionBar,
 } from "@/components/CatalogGrid";
+import { PotionIcon } from "@/components/PotionIcon";
 import { PotSkinPreview } from "@/components/PotSkinPreview";
 import { useAuth } from "@/components/AuthProvider";
 import { getBackgroundById } from "@/lib/backgrounds";
@@ -25,7 +25,6 @@ import {
 import { getPotionBalance, POTION_CHANGE_EVENT } from "@/lib/potion";
 import {
   CATEGORY_LABELS,
-  getStoreItemById,
   getStoreItemsByCategory,
   type StoreCategory,
   type StoreItem,
@@ -66,8 +65,8 @@ export function StoreDock() {
   const [balance, setBalance] = useState(0);
   const [ownedKeys, setOwnedKeys] = useState<string[]>([]);
   const [equipped, setEquipped] = useState<EquippedSlots>(() => getEquipped());
-  const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [pendingItem, setPendingItem] = useState<StoreItem | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
@@ -101,29 +100,16 @@ export function StoreDock() {
     }));
   }, []);
 
-  useEffect(() => {
-    if (selectedId) return;
-    const first = itemsByCategory[0]?.items[0];
-    if (first) setSelectedId(first.id);
-  }, [itemsByCategory, selectedId]);
-
   function isOwned(item: StoreItem) {
     return isStoreItemOwned(item) || ownedKeys.includes(`item:${item.id}`);
   }
 
-  const selected = selectedId ? getStoreItemById(selectedId) : undefined;
-  const selectedOwned = selected ? isOwned(selected) : false;
-  const selectedEquipped =
-    !!selected &&
-    ((selected.kind === "background" &&
-      equipped.backgroundId === selected.unlockId) ||
-      (selected.kind === "potSkin" && equipped.potSkinId === selected.unlockId));
-  const canBuy =
-    !!selected &&
-    !selectedOwned &&
-    !selected.comingSoon &&
-    (unlimited || balance >= selected.price) &&
-    purchasing !== selected.id;
+  const canBuyPending =
+    !!pendingItem &&
+    !isOwned(pendingItem) &&
+    !pendingItem.comingSoon &&
+    (unlimited || balance >= pendingItem.price) &&
+    !purchasing;
 
   function showToast(msg: string, ms = 1600) {
     setToast(msg);
@@ -143,22 +129,33 @@ export function StoreDock() {
   }
 
   function handleItemTap(item: StoreItem) {
-    setSelectedId(item.id);
-    if (isOwned(item) && !item.comingSoon) {
-      equipStoreItem(item);
+    if (item.comingSoon) {
+      showToast("곧 만나볼 수 있어요");
+      return;
     }
+    if (isOwned(item)) {
+      equipStoreItem(item);
+      return;
+    }
+    setPendingItem(item);
   }
 
   function handlePurchase() {
-    if (!selected || !canBuy) return;
-    setPurchasing(selected.id);
-    const result = purchase(selected.id);
-    setPurchasing(null);
+    if (!pendingItem || !canBuyPending) {
+      if (pendingItem && !unlimited && balance < pendingItem.price) {
+        showToast("포션이 부족해요");
+      }
+      return;
+    }
+    setPurchasing(true);
+    const result = purchase(pendingItem.id);
+    setPurchasing(false);
     if (result.success) {
       setBalance(result.balance);
       setOwnedKeys(getOwnedItemKeys());
-      equipStoreItem(selected);
-      showToast(`${selected.name}을(를) 구매하고 적용했어요!`, 1800);
+      equipStoreItem(pendingItem);
+      setPendingItem(null);
+      showToast(`${pendingItem.name}을(를) 구매하고 적용했어요!`, 1800);
     } else if (result.reason === "insufficient") {
       showToast("포션이 부족해요");
     }
@@ -167,7 +164,7 @@ export function StoreDock() {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       {toast && (
-        <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex justify-center">
           <p className="rounded-full border border-[#9caf88]/40 bg-white/95 px-3 py-1 text-[11px] font-semibold text-[#6d8a5e] shadow-sm">
             {toast}
           </p>
@@ -182,10 +179,15 @@ export function StoreDock() {
               <CatalogGrid>
                 {items.map((item) => {
                   const owned = isOwned(item);
+                  const equippedNow =
+                    (item.kind === "background" &&
+                      equipped.backgroundId === item.unlockId) ||
+                    (item.kind === "potSkin" &&
+                      equipped.potSkinId === item.unlockId);
                   return (
                     <CatalogCell
                       key={item.id}
-                      selected={selectedId === item.id}
+                      selected={pendingItem?.id === item.id || equippedNow}
                       onClick={() => handleItemTap(item)}
                       preview={<ItemPreview item={item} />}
                       price={item.price}
@@ -210,50 +212,52 @@ export function StoreDock() {
         ))}
       </div>
 
-      {selected && (
-        <div className="shrink-0 px-3 pb-3">
-          <CatalogSelectionBar
-            title={selected.name}
-            subtitle={
-              selectedOwned
-                ? selectedEquipped
-                  ? "지금 정원에 적용되어 있어요"
-                  : "아이콘을 누르면 바로 적용돼요"
-                : selected.comingSoon
-                  ? "곧 만나볼 수 있어요"
-                  : selected.description
-            }
-            action={
-              selectedOwned ? (
-                <span
-                  className={`shrink-0 rounded-xl px-3 py-2 text-xs font-bold ${
-                    selectedEquipped
-                      ? "bg-[#9caf88]/25 text-[#6d8a5e]"
-                      : "border border-[#9caf88]/40 bg-[#eef4e8] text-[#6d8a5e]"
-                  }`}
-                >
-                  {selectedEquipped ? "적용됨" : "보유 중"}
-                </span>
-              ) : selected.comingSoon ? (
-                <span className="shrink-0 rounded-xl border border-[#e8e0d4] bg-[#f5f0e8] px-3 py-2 text-xs font-semibold text-[#b5aea3]">
-                  준비중
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!canBuy}
-                  onClick={handlePurchase}
-                  className="shrink-0 rounded-xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {purchasing === selected.id
-                    ? "구매 중…"
-                    : !unlimited && balance < selected.price
-                      ? "포션 부족"
-                      : "구매"}
-                </button>
-              )
-            }
+      {pendingItem && (
+        <div className="absolute inset-0 z-10 flex flex-col justify-end">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#4a5248]/25"
+            aria-label="구매 창 닫기"
+            onClick={() => setPendingItem(null)}
           />
+          <div className="relative rounded-t-2xl border border-[#e8e0d4] bg-[#FDFBF7] px-4 pb-4 pt-3 shadow-[0_-8px_24px_rgba(74,82,72,0.12)]">
+            <div className="mb-3 flex items-center gap-3">
+              <ItemPreview item={pendingItem} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-[#4a5248]">
+                  {pendingItem.name}
+                </p>
+                <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#8ba4b4]">
+                  {pendingItem.description}
+                </p>
+                <p className="mt-1 inline-flex items-center gap-0.5 text-xs font-bold text-[#4a5248]">
+                  <PotionIcon className="h-3.5 w-3.5 text-[#c98fd6]" />
+                  {pendingItem.price}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingItem(null)}
+                className="flex-1 rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-sm font-semibold text-[#4a5248] transition hover:bg-[#F5F0E8]"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                disabled={purchasing}
+                onClick={handlePurchase}
+                className="flex-[1.4] rounded-xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {purchasing
+                  ? "구매 중…"
+                  : !unlimited && balance < pendingItem.price
+                    ? "포션 부족"
+                    : "구매하기"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

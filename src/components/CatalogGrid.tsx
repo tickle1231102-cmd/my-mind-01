@@ -100,27 +100,3 @@ export function CatalogCell({
     </button>
   );
 }
-
-type CatalogSelectionBarProps = {
-  title: string;
-  subtitle?: string;
-  action?: ReactNode;
-};
-
-export function CatalogSelectionBar({
-  title,
-  subtitle,
-  action,
-}: CatalogSelectionBarProps) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[#e8e0d4] bg-[#FDFBF7]/95 px-3.5 py-3 shadow-sm">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-bold text-[#4a5248]">{title}</p>
-        {subtitle && (
-          <p className="mt-0.5 truncate text-[11px] text-[#8ba4b4]">{subtitle}</p>
-        )}
-      </div>
-      {action}
-    </div>
-  );
-}
