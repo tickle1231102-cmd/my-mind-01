@@ -187,13 +187,13 @@ function MenuIcon({ id }: { id: MenuItemId }) {
     case "settings":
       return (
         <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
           <path
-            d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18"
+            d="M10.3 3.9c.1-.5.55-.9 1.07-.9h1.26c.52 0 .97.4 1.07.9l.2 1.22c.06.36.3.66.62.84.07.04.14.08.21.12.31.19.69.25 1.03.12l1.16-.43c.5-.19 1.06.05 1.3.53l.63 1.24c.24.48.1 1.07-.33 1.38l-.96.79c-.28.23-.42.59-.41.95v.24c-.01.36.13.72.41.95l.96.79c.43.31.57.9.33 1.38l-.63 1.24c-.24.48-.8.72-1.3.53l-1.16-.43c-.34-.13-.72-.07-1.03.12-.07.04-.14.08-.21.12-.32.18-.56.48-.62.84l-.2 1.22c-.1.5-.55.9-1.07.9h-1.26c-.52 0-.97-.4-1.07-.9l-.2-1.22c-.06-.36-.3-.66-.62-.84a4.6 4.6 0 0 1-.21-.12c-.31-.19-.69-.25-1.03-.12l-1.16.43c-.5.19-1.06-.05-1.3-.53l-.63-1.24c-.24-.48-.1-1.07.33-1.38l.96-.79c.28-.23.42-.59.41-.95v-.24c.01-.36-.13-.72-.41-.95l-.96-.79c-.43-.31-.57-.9-.33-1.38l.63-1.24c.24-.48.8-.72 1.3-.53l1.16.43c.34.13.72.07 1.03-.12.07-.04.14-.08.21-.12.32-.18.56-.48.62-.84l.2-1.22Z"
             stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
           />
+          <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.7" />
         </svg>
       );
   }
@@ -1004,38 +1004,40 @@ export default function Home() {
                   <MenuIcon id="settings" />
                 </Link>
                 <PotionBadge />
-                <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-sm sm:px-4 sm:py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
-                    Mind level
-                  </p>
-                  <p className="text-xl font-bold text-[#6d8a5e] sm:text-2xl">
-                    Lv.{level}
-                  </p>
-                </div>
               </div>
             </div>
 
-            <div
-              className={`rounded-2xl border border-[#e8e0d4] bg-white/80 px-4 py-3 shadow-sm backdrop-blur-sm transition-shadow duration-500 ${
-                hpGlow === "up"
-                  ? "hp-glow-up"
-                  : hpGlow === "down"
-                    ? "hp-glow-down"
-                    : ""
-              }`}
-            >
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-semibold text-[#6d8a5e]">HP</span>
-                <span className="tabular-nums font-medium text-[#4a5248]">
-                  {hp} / {MAX_HP}
-                  <span className="ml-1 text-[#8ba4b4]">({hpPercent}%)</span>
-                </span>
+            <div className="flex items-stretch gap-2">
+              <div className="flex shrink-0 flex-col justify-center rounded-2xl border border-[#e8dcc8] bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm sm:px-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
+                  Mind level
+                </p>
+                <p className="text-xl font-bold leading-none text-[#6d8a5e] sm:text-2xl">
+                  Lv.{level}
+                </p>
               </div>
-              <div className="h-5 overflow-hidden rounded-full bg-[#ede8df] shadow-inner">
-                <div
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{ width: `${hpPercent}%`, backgroundColor: barColor }}
-                />
+              <div
+                className={`min-w-0 flex-1 rounded-2xl border border-[#e8e0d4] bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm transition-shadow duration-500 sm:px-4 ${
+                  hpGlow === "up"
+                    ? "hp-glow-up"
+                    : hpGlow === "down"
+                      ? "hp-glow-down"
+                      : ""
+                }`}
+              >
+                <div className="mb-1.5 flex items-center justify-between text-sm">
+                  <span className="font-semibold text-[#6d8a5e]">HP</span>
+                  <span className="tabular-nums font-medium text-[#4a5248]">
+                    {hp} / {MAX_HP}
+                    <span className="ml-1 text-[#8ba4b4]">({hpPercent}%)</span>
+                  </span>
+                </div>
+                <div className="h-4 overflow-hidden rounded-full bg-[#ede8df] shadow-inner sm:h-5">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${hpPercent}%`, backgroundColor: barColor }}
+                  />
+                </div>
               </div>
             </div>
           </header>
