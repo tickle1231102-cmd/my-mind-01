@@ -202,6 +202,74 @@ function MenuIcon({ id }: { id: MenuItemId }) {
   }
 }
 
+function RootModeIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 12V7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 9.5C10.2 8.8 8.8 7.5 8 6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 9.5C13.8 8.8 15.2 7.5 16 6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 12h18"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 12.5C12 15.5 11.5 18 11 21"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 13C9 15 6 17.5 4.5 20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 13C15 15 18 17.5 19.5 20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.5 16.5C7.5 18 6 19 5 19.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        opacity="0.75"
+      />
+      <path
+        d="M14.5 16.5C16.5 18 18 19 19 19.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        opacity="0.75"
+      />
+      <circle cx="11" cy="21" r="1" fill="currentColor" opacity="0.6" />
+      <circle cx="4.5" cy="20" r="0.9" fill="currentColor" opacity="0.5" />
+      <circle cx="19.5" cy="20" r="0.9" fill="currentColor" opacity="0.5" />
+    </svg>
+  );
+}
+
 export default function Home() {
   const { ensurePlaying } = useBgm();
   const [level, setLevel] = useState(0);
@@ -540,10 +608,10 @@ export default function Home() {
     window.setTimeout(() => setShowRootGuide(true), 2300);
   }
 
-  function dismissRootGuide(openRootMode = false) {
+  function dismissRootGuide(startRoot = false) {
     window.localStorage.setItem(ROOT_GUIDE_KEY, "done");
     setShowRootGuide(false);
-    if (openRootMode) setShowRootMode(true);
+    if (startRoot) setShowRootMode(true);
   }
 
   function applyHpGain(gain: number, plantFxKind?: PlantFx) {
@@ -889,7 +957,7 @@ export default function Home() {
         .pot-bubble-leave { animation: pot-bubble-out 0.3s ease-in both; }
       `}</style>
 
-      <div className="relative flex min-h-dvh flex-col bg-[#FDFBF7]">
+      <div className="relative flex h-dvh flex-col overflow-hidden bg-[#FDFBF7]">
         {showWelcome && (
           <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#4a5248]/35 px-5 backdrop-blur-[3px]">
             <div
@@ -1044,10 +1112,8 @@ export default function Home() {
               </ul>
 
               <p className="mt-3 text-xs leading-relaxed text-[#8ba4b4]">
-                화면 가운데{" "}
-                <span className="font-semibold text-[#6d8a5e]">
-                  뿌리 강화 모드
-                </span>{" "}
+                화분 아래{" "}
+                <span className="font-semibold text-[#6d8a5e]">뿌리</span>{" "}
                 버튼으로 언제든 다시 들어갈 수 있어요.
               </p>
 
@@ -1075,9 +1141,9 @@ export default function Home() {
           <div className="absolute bottom-0 right-0 h-40 w-40 rounded-full bg-[#e8dcc8]/50 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
+        <div className="relative mx-auto flex h-full min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
           {/* ── 상단: 레벨 & HP ── */}
-          <header className="shrink-0 space-y-1.5">
+          <header className="shrink-0 space-y-1">
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Link
@@ -1115,21 +1181,18 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-stretch gap-1.5">
+            <div className="flex items-stretch gap-1">
               <div
-                className={`flex shrink-0 flex-col justify-center rounded-xl border border-[#e8dcc8] bg-white/80 px-2.5 py-1 shadow-sm backdrop-blur-sm sm:px-3 ${
+                className={`flex shrink-0 items-center rounded-xl border border-[#e8dcc8] bg-white/80 px-2 py-1 shadow-sm backdrop-blur-sm sm:px-2.5 ${
                   levelUpBurst != null ? "level-up-stat-pulse" : ""
                 }`}
               >
-                <p className="text-[8px] font-semibold uppercase tracking-wider text-[#e8a598]">
-                  Mind level
-                </p>
                 <p className="text-xs font-bold leading-none text-[#6d8a5e] sm:text-sm">
                   Lv.{level}
                 </p>
               </div>
               <div
-                className={`min-w-0 flex-1 rounded-xl border border-[#e8e0d4] bg-white/80 px-2.5 py-1 shadow-sm backdrop-blur-sm transition-shadow duration-500 sm:px-3 ${
+                className={`min-w-0 flex-1 rounded-xl border border-[#e8e0d4] bg-white/80 px-2 py-1 shadow-sm backdrop-blur-sm transition-shadow duration-500 sm:px-2.5 ${
                   hpGlow === "up"
                     ? "hp-glow-up"
                     : hpGlow === "down"
@@ -1137,13 +1200,13 @@ export default function Home() {
                       : ""
                 }`}
               >
-                <div className="mb-0.5 flex items-center justify-between text-[11px] leading-none">
+                <div className="mb-0.5 flex items-center justify-between text-[10px] leading-none">
                   <span className="font-semibold text-[#6d8a5e]">HP</span>
                   <span className="tabular-nums font-medium text-[#4a5248]">
                     {hp} / {MAX_HP}
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[#ede8df] shadow-inner sm:h-2.5">
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#ede8df] shadow-inner sm:h-2">
                   <div
                     className="h-full rounded-full transition-all duration-700 ease-out"
                     style={{ width: `${hpPercent}%`, backgroundColor: barColor }}
@@ -1278,101 +1341,35 @@ export default function Home() {
               </div>
             </div>
 
-            {potName && (
-              <p className="mt-2 text-center text-xs font-semibold tracking-wide text-[#8ba4b4]">
-                {potName}
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <p className="min-w-0 flex-1 truncate rounded-full border border-[#e8dcc8] bg-white/80 px-3 py-1 text-center text-xs font-medium leading-relaxed text-[#6d8a5e] shadow-sm sm:text-sm">
+                {potName ? `${potName} · ` : ""}
+                {getPlantStatus(hp, level, wiltedByNegative)}
               </p>
-            )}
-            <p className="mt-1 max-w-xs self-center rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-1.5 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
-              {getPlantStatus(hp, level, wiltedByNegative)}
-            </p>
-
-            {!isSeedStage && (
-              <button
-                type="button"
-                onClick={() => setShowRootMode(true)}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#b8c9a8] bg-gradient-to-b from-[#eef4e8] to-[#dce8d4] px-4 py-3 text-sm font-semibold text-[#4a5a3c] shadow-sm transition hover:from-[#e4eedc] hover:to-[#d0e0c8] active:scale-[0.98]"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-5 w-5 text-[#6d8a5e]"
-                  aria-hidden
+              {!isSeedStage && (
+                <button
+                  type="button"
+                  onClick={() => setShowRootMode(true)}
+                  aria-label={
+                    rootState.level > 0 || rootState.hp > 0
+                      ? `뿌리 강화 모드, 뿌리 레벨 ${rootState.level}`
+                      : "뿌리 강화 모드"
+                  }
+                  className={`flex shrink-0 items-center gap-1 rounded-full border border-[#b8c9a8] bg-gradient-to-b from-[#eef4e8] to-[#dce8d4] px-2.5 py-1 text-[11px] font-semibold text-[#4a5a3c] shadow-sm transition hover:from-[#e4eedc] hover:to-[#d0e0c8] active:scale-95 sm:text-xs ${
+                    showRootGuide ? "pot-guide-pulse" : ""
+                  }`}
                 >
-                  <path
-                    d="M12 12V7"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M12 9.5C10.2 8.8 8.8 7.5 8 6"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 9.5C13.8 8.8 15.2 7.5 16 6"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M3 12h18"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M12 12.5C12 15.5 11.5 18 11 21"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M12 13C9 15 6 17.5 4.5 20"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M12 13C15 15 18 17.5 19.5 20"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M9.5 16.5C7.5 18 6 19 5 19.8"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    opacity="0.75"
-                  />
-                  <path
-                    d="M14.5 16.5C16.5 18 18 19 19 19.8"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    opacity="0.75"
-                  />
-                  <circle cx="11" cy="21" r="1" fill="currentColor" opacity="0.6" />
-                  <circle cx="4.5" cy="20" r="0.9" fill="currentColor" opacity="0.5" />
-                  <circle cx="19.5" cy="20" r="0.9" fill="currentColor" opacity="0.5" />
-                </svg>
-                뿌리 강화 모드
-                {(rootState.level > 0 || rootState.hp > 0) && (
-                  <span className="rounded-full bg-[#6d8a5e]/15 px-2 py-0.5 text-[11px] font-bold text-[#6d8a5e]">
-                    Lv.{rootState.level}
-                  </span>
-                )}
-              </button>
-            )}
+                  <RootModeIcon className="h-3.5 w-3.5 text-[#6d8a5e]" />
+                  {rootState.level > 0 || rootState.hp > 0
+                    ? `뿌리 Lv.${rootState.level}`
+                    : "뿌리"}
+                </button>
+              )}
+            </div>
           </main>
 
           {/* ── 하단: 채팅 / 상점 / 아이템 ── */}
-          <footer className="mt-2 flex min-h-[16.5rem] flex-col overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md sm:min-h-[18.5rem]">
+          <footer className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md">
             <div
               role="tablist"
               aria-label="하단 패널"
@@ -1397,7 +1394,7 @@ export default function Home() {
             </div>
 
             {dockTab === "chat" && (
-              <>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div className="flex max-h-40 min-h-28 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 sm:max-h-48">
                   {messages.map((msg) => (
                     <div
@@ -1484,7 +1481,7 @@ export default function Home() {
                     보내기
                   </button>
                 </form>
-              </>
+              </div>
             )}
 
             {dockTab === "store" && <StoreDock />}

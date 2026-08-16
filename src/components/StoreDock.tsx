@@ -171,7 +171,7 @@ export function StoreDock() {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3">
         {itemsByCategory.map(({ category, label, items }) => (
           <section key={category}>
             <h2 className="mb-1.5 text-xs font-bold text-[#6d8a5e]">{label}</h2>

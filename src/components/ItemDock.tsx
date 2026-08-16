@@ -98,7 +98,7 @@ export function ItemDock({ onOpenStore }: { onOpenStore: () => void }) {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3">
         <section>
           <h2 className="mb-1.5 text-xs font-bold text-[#6d8a5e]">배경 테마</h2>
           {ownedBackgroundDefs.length === 0 ? (
