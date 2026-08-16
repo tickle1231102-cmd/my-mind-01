@@ -9,9 +9,11 @@ import { PotionIcon } from "@/components/PotionIcon";
 import { RootStrengthenMode } from "@/components/RootStrengthenMode";
 import { BackgroundSceneOverlay } from "@/components/BackgroundPreview";
 import { ItemDock } from "@/components/ItemDock";
+import { LevelUpBurst } from "@/components/LevelUpBurst";
 import { SproutCharacter } from "@/components/SproutCharacter";
 import { StoreDock } from "@/components/StoreDock";
 import { WateringCan } from "@/components/WateringCan";
+import { playLevelUpFanfare } from "@/lib/level-up-sfx";
 import { formatDateKey, getDayMessages, saveDayMessages } from "@/lib/chat-history";
 import { completeDailyQuest } from "@/lib/daily-quests";
 import { getFallbackReply } from "@/lib/healing-bot";
@@ -232,6 +234,7 @@ export default function Home() {
   const [plantHydrated, setPlantHydrated] = useState(false);
   const [messagesHydrated, setMessagesHydrated] = useState(false);
   const [questToast, setQuestToast] = useState<string | null>(null);
+  const [levelUpBurst, setLevelUpBurst] = useState<number | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -240,6 +243,9 @@ export default function Home() {
   const bubblePopSoundRef = useRef<HTMLAudioElement | null>(null);
   const wateringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const questToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const levelUpBurstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const potBubbleTextRef = useRef<string | null>(null);
   const potBubbleHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -449,6 +455,7 @@ export default function Home() {
       bubblePopSoundRef.current = null;
       if (wateringTimerRef.current) clearTimeout(wateringTimerRef.current);
       if (questToastTimerRef.current) clearTimeout(questToastTimerRef.current);
+      if (levelUpBurstTimerRef.current) clearTimeout(levelUpBurstTimerRef.current);
     };
   }, []);
 
@@ -509,7 +516,7 @@ export default function Home() {
     if (reachedLevel !== 1) return;
     if (window.localStorage.getItem(ROOT_GUIDE_KEY) === "done") return;
     // 레벨업 연출이 끝난 뒤 안내창 표시
-    window.setTimeout(() => setShowRootGuide(true), 700);
+    window.setTimeout(() => setShowRootGuide(true), 2300);
   }
 
   function dismissRootGuide(openRootMode = false) {
@@ -532,6 +539,8 @@ export default function Home() {
       triggerWatering();
       flashHpGlow("up");
       playFx("bloom");
+      playLevelUpFanfare();
+      triggerLevelUpBurst(newLevel);
       maybeShowRootGuide(newLevel);
     } else if (hpIncreased) {
       setWiltedByNegative(false);
@@ -544,6 +553,15 @@ export default function Home() {
     setLevel(newLevel);
 
     return { leveledUp, hpIncreased };
+  }
+
+  function triggerLevelUpBurst(reachedLevel: number) {
+    setLevelUpBurst(reachedLevel);
+    if (levelUpBurstTimerRef.current) clearTimeout(levelUpBurstTimerRef.current);
+    levelUpBurstTimerRef.current = setTimeout(() => {
+      setLevelUpBurst(null);
+      levelUpBurstTimerRef.current = null;
+    }, 2100);
   }
 
   function playPopSound() {
@@ -579,7 +597,8 @@ export default function Home() {
 
   function playFx(kind: PlantFx) {
     setPlantFx(kind);
-    const ms = kind === "shake" || kind === "wilt" ? 600 : 700;
+    const ms =
+      kind === "shake" || kind === "wilt" ? 600 : kind === "bloom" ? 1100 : 700;
     setTimeout(() => setPlantFx("float"), ms);
   }
 
@@ -777,6 +796,38 @@ export default function Home() {
         .plant-wilt { animation: heal-wilt 0.6s ease-in forwards; }
         .hp-glow-up { box-shadow: 0 0 18px 4px rgba(156, 175, 136, 0.45); }
         .hp-glow-down { box-shadow: 0 0 18px 4px rgba(232, 165, 152, 0.5); }
+        @keyframes level-up-flash {
+          0% { opacity: 0.55; }
+          35% { opacity: 0.18; }
+          100% { opacity: 0; }
+        }
+        @keyframes level-up-confetti {
+          0% { transform: translate3d(0, 110%, 0) rotate(0deg); opacity: 0; }
+          12% { opacity: 1; }
+          100% { transform: translate3d(var(--drift, 0px), -130%, 0) rotate(220deg); opacity: 0; }
+        }
+        @keyframes level-up-badge {
+          0% { transform: scale(0.4); opacity: 0; }
+          45% { transform: scale(1.12); opacity: 1; }
+          70% { transform: scale(0.96); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes level-up-stat {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(224, 176, 74, 0); }
+          40% { transform: scale(1.08); box-shadow: 0 0 16px 4px rgba(224, 176, 74, 0.45); }
+        }
+        .level-up-flash {
+          background: radial-gradient(circle at 50% 60%, rgba(255, 244, 180, 0.85), rgba(156, 175, 136, 0.2) 45%, transparent 72%);
+          animation: level-up-flash 1.1s ease-out forwards;
+        }
+        .level-up-confetti {
+          bottom: 8%;
+          animation-name: level-up-confetti;
+          animation-timing-function: cubic-bezier(0.22, 0.7, 0.28, 1);
+          animation-fill-mode: forwards;
+        }
+        .level-up-badge { animation: level-up-badge 0.7s cubic-bezier(0.34, 1.45, 0.64, 1) both; }
+        .level-up-stat-pulse { animation: level-up-stat 0.85s ease-out; }
         @keyframes touch-guide-in {
           0% { opacity: 0; transform: translateY(8px); }
           100% { opacity: 1; transform: translateY(0); }
@@ -1008,11 +1059,15 @@ export default function Home() {
             </div>
 
             <div className="flex items-stretch gap-2">
-              <div className="flex shrink-0 flex-col justify-center rounded-2xl border border-[#e8dcc8] bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm sm:px-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
+              <div
+                className={`flex shrink-0 flex-col justify-center rounded-2xl border border-[#e8dcc8] bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm sm:px-3.5 ${
+                  levelUpBurst != null ? "level-up-stat-pulse" : ""
+                }`}
+              >
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#e8a598]">
                   Mind level
                 </p>
-                <p className="text-xl font-bold leading-none text-[#6d8a5e] sm:text-2xl">
+                <p className="text-sm font-bold leading-none text-[#6d8a5e] sm:text-base">
                   Lv.{level}
                 </p>
               </div>
@@ -1029,7 +1084,6 @@ export default function Home() {
                   <span className="font-semibold text-[#6d8a5e]">HP</span>
                   <span className="tabular-nums font-medium text-[#4a5248]">
                     {hp} / {MAX_HP}
-                    <span className="ml-1 text-[#8ba4b4]">({hpPercent}%)</span>
                   </span>
                 </div>
                 <div className="h-4 overflow-hidden rounded-full bg-[#ede8df] shadow-inner sm:h-5">
@@ -1060,6 +1114,7 @@ export default function Home() {
               {selectedBackground.sceneClass && !selectedBackground.src && (
                 <BackgroundSceneOverlay sceneId={selectedBackground.id} />
               )}
+              {levelUpBurst != null && <LevelUpBurst level={levelUpBurst} />}
 
               <div
                 className={`absolute inset-x-0 z-[1] flex justify-center ${

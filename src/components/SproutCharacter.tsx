@@ -38,7 +38,7 @@ export function SproutCharacter({
   useEffect(() => {
     if (level > prevLevelRef.current) {
       setGrowing(true);
-      const t = window.setTimeout(() => setGrowing(false), 900);
+      const t = window.setTimeout(() => setGrowing(false), 1100);
       prevLevelRef.current = level;
       return () => window.clearTimeout(t);
     }
@@ -274,9 +274,10 @@ export function SproutCharacter({
           80% { transform: translateX(5px) rotate(3deg); }
         }
         @keyframes sprout-bloom {
-          0% { transform: scale(1); }
-          40% { transform: scale(1.14); }
-          100% { transform: scale(1); }
+          0% { transform: scale(1); filter: brightness(1); }
+          35% { transform: scale(1.22); filter: brightness(1.22); }
+          65% { transform: scale(0.96); filter: brightness(1.08); }
+          100% { transform: scale(1); filter: brightness(1); }
         }
         @keyframes sprout-wilt {
           0% { transform: rotate(0) scale(1); }
@@ -299,10 +300,10 @@ export function SproutCharacter({
         }
         .sprout-fx-float { animation: sprout-float 3.4s ease-in-out infinite; }
         .sprout-fx-shake { animation: sprout-shake 0.55s ease-in-out; }
-        .sprout-fx-bloom { animation: sprout-bloom 0.75s ease-out; }
+        .sprout-fx-bloom { animation: sprout-bloom 1.1s ease-out; }
         .sprout-fx-wilt { animation: sprout-wilt 0.6s ease-in forwards; }
-        .sprout-growing { animation: sprout-grow-pop 0.9s cubic-bezier(0.34, 1.4, 0.64, 1); }
-        .sprout-growing .sc-sparkle { animation: sprout-sparkle 0.9s ease-out both; }
+        .sprout-growing { animation: sprout-grow-pop 1.1s cubic-bezier(0.34, 1.4, 0.64, 1); }
+        .sprout-growing .sc-sparkle { animation: sprout-sparkle 1.1s ease-out both; }
         .sc-blink { transform-origin: center; animation: sprout-blink 4.5s ease-in-out infinite; }
         .sprout-mood-angry .sc-blink { animation: none; }
 
