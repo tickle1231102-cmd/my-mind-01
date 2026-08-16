@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { User } from "@supabase/supabase-js";
 import { hydrateGameFromCloud } from "@/lib/cloud-sync";
+import { setCurrentUserEmail } from "@/lib/dev-account";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthContextValue = {
@@ -62,6 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   useEffect(() => {
+    setCurrentUserEmail(user?.email ?? null);
+  }, [user]);
+
+  useEffect(() => {
     let mounted = true;
 
     async function init() {
@@ -75,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } = await withTimeout(supabase.auth.getUser(), 4000);
         if (!mounted) return;
         setUser(next);
+        setCurrentUserEmail(next?.email ?? null);
         if (next) await hydrateGameFromCloud();
       } catch (error) {
         console.error("[mind] auth init failed", error);
@@ -92,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       const next = session?.user ?? null;
       setUser(next);
+      setCurrentUserEmail(next?.email ?? null);
       setLoading(false);
       if (
         next &&
@@ -109,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
+    setCurrentUserEmail(null);
     setUser(null);
   }, [supabase]);
 

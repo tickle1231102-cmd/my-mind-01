@@ -3,6 +3,8 @@
  * 추후 Store/Item 탭에서 소비할 수 있도록 설계된 잔고 시스템.
  */
 
+import { isDevAccount } from "./dev-account";
+
 export const POTION_LABEL = "포션";
 export const POTION_CHANGE_EVENT = "healing-garden-potion-change";
 
@@ -33,6 +35,16 @@ export function getPotionBalance(): number {
   return readBalance();
 }
 
+export function hasUnlimitedPotions(): boolean {
+  return isDevAccount();
+}
+
+export function canAffordPotions(amount: number): boolean {
+  if (amount <= 0) return true;
+  if (hasUnlimitedPotions()) return true;
+  return readBalance() >= amount;
+}
+
 export function addPotions(amount: number): number {
   if (amount <= 0) return readBalance();
   const next = readBalance() + amount;
@@ -44,7 +56,13 @@ export function spendPotions(
   amount: number,
 ): { success: boolean; balance: number } {
   const current = readBalance();
-  if (amount <= 0 || current < amount) {
+  if (amount <= 0) {
+    return { success: false, balance: current };
+  }
+  if (hasUnlimitedPotions()) {
+    return { success: true, balance: current };
+  }
+  if (current < amount) {
     return { success: false, balance: current };
   }
   const next = current - amount;

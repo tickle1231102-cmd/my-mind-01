@@ -9,7 +9,9 @@ import {
   CatalogSelectionBar,
 } from "@/components/CatalogGrid";
 import { PotSkinPreview } from "@/components/PotSkinPreview";
+import { useAuth } from "@/components/AuthProvider";
 import { getBackgroundById } from "@/lib/backgrounds";
+import { isDevAccountEmail } from "@/lib/dev-account";
 import {
   equipBackground,
   equipPotSkin,
@@ -59,6 +61,8 @@ function ItemPreview({ item }: { item: StoreItem }) {
 }
 
 export function StoreDock() {
+  const { user } = useAuth();
+  const unlimited = isDevAccountEmail(user?.email);
   const [balance, setBalance] = useState(0);
   const [ownedKeys, setOwnedKeys] = useState<string[]>([]);
   const [equipped, setEquipped] = useState<EquippedSlots>(() => getEquipped());
@@ -118,7 +122,7 @@ export function StoreDock() {
     !!selected &&
     !selectedOwned &&
     !selected.comingSoon &&
-    balance >= selected.price &&
+    (unlimited || balance >= selected.price) &&
     purchasing !== selected.id;
 
   function showToast(msg: string, ms = 1600) {
@@ -243,7 +247,7 @@ export function StoreDock() {
                 >
                   {purchasing === selected.id
                     ? "구매 중…"
-                    : balance < selected.price
+                    : !unlimited && balance < selected.price
                       ? "포션 부족"
                       : "구매"}
                 </button>

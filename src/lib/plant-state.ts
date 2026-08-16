@@ -34,6 +34,12 @@ export function getPlantState(): PlantState {
   }
 }
 
+export function resetPlantLevel() {
+  const next = { ...DEFAULT_STATE };
+  setPlantState(next);
+  void import("@/lib/cloud-sync").then((m) => m.pushGameStateToCloud(next));
+}
+
 export function setPlantState(
   state: PlantState,
   options?: { skipCloud?: boolean; skipEvent?: boolean },

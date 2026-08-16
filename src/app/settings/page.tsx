@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useBgm } from "@/components/BgmProvider";
 import { useUiClickSound } from "@/components/UiClickSoundProvider";
+import { isDevAccountEmail } from "@/lib/dev-account";
+import { resetPlantLevel } from "@/lib/plant-state";
 
 const NICKNAME_KEY = "healing-garden-user-nickname";
 const POT_NAME_KEY = "healing-garden-pot-name";
@@ -20,6 +22,8 @@ export default function SettingsPage() {
   const [savedToast, setSavedToast] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const isDev = isDevAccountEmail(user?.email);
 
   useEffect(() => {
     setNickname(window.localStorage.getItem(NICKNAME_KEY)?.trim() ?? "");
@@ -138,6 +142,41 @@ export default function SettingsPage() {
               </Link>
             )}
           </section>
+
+          {isDev && (
+            <section className="rounded-2xl border border-[#e8c9a0] bg-[#fff8ee]/90 p-4 shadow-sm">
+              <p className="text-sm font-semibold text-[#4a5248]">개발자 도구</p>
+              <p className="mt-1 text-xs leading-relaxed text-[#8ba4b4]">
+                이 계정에서만 보여요. 포션은 차감되지 않고, 화분 레벨만 초기화할 수 있어요.
+              </p>
+              <p className="mt-3 rounded-2xl bg-white/80 px-3 py-2 text-sm font-semibold text-[#6d8a5e]">
+                포션 무제한
+              </p>
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "화분 레벨과 HP만 0으로 되돌릴까요? 채팅·여정·아이템은 그대로 둡니다.",
+                    )
+                  ) {
+                    return;
+                  }
+                  setResetting(true);
+                  try {
+                    resetPlantLevel();
+                    showToast("화분 레벨을 초기화했어요");
+                  } finally {
+                    setResetting(false);
+                  }
+                }}
+                className="mt-3 w-full rounded-xl border border-[#e8dcc8] bg-white px-4 py-2.5 text-sm font-semibold text-[#4a5248] transition hover:bg-[#FDFBF7] disabled:opacity-50"
+              >
+                {resetting ? "초기화 중…" : "화분 레벨 초기화"}
+              </button>
+            </section>
+          )}
 
           <section className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm">
             <label

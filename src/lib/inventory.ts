@@ -6,7 +6,7 @@ import {
   DEFAULT_FREE_BACKGROUND_IDS,
   type BackgroundId,
 } from "@/lib/backgrounds";
-import { getPotionBalance, spendPotions } from "@/lib/potion";
+import { canAffordPotions, getPotionBalance, spendPotions } from "@/lib/potion";
 import {
   DEFAULT_FREE_POT_SKIN_ID,
   getStoreItemById,
@@ -154,6 +154,9 @@ export function purchase(itemId: string): PurchaseResult {
     return { success: false, reason: "already_owned", balance };
   }
 
+  if (!canAffordPotions(item.price)) {
+    return { success: false, reason: "insufficient", balance };
+  }
   const spend = spendPotions(item.price);
   if (!spend.success) {
     return { success: false, reason: "insufficient", balance: spend.balance };
