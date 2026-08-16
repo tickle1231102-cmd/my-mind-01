@@ -32,10 +32,11 @@ export default function SettingsPage() {
     window.setTimeout(() => setSavedToast(null), 1600);
   }
 
-  function handleSaveNickname(e: React.FormEvent) {
-    e.preventDefault();
-    const next = nickname.trim().slice(0, MAX_NAME_LENGTH);
+  function persistNickname(value: string) {
+    const next = value.trim().slice(0, MAX_NAME_LENGTH);
+    const prev = window.localStorage.getItem(NICKNAME_KEY)?.trim() ?? "";
     setNickname(next);
+    if (next === prev) return;
     if (next) {
       window.localStorage.setItem(NICKNAME_KEY, next);
     } else {
@@ -44,11 +45,15 @@ export default function SettingsPage() {
     showToast("닉네임을 저장했어요");
   }
 
-  function handleSavePotName(e: React.FormEvent) {
-    e.preventDefault();
-    const next = potName.trim().slice(0, MAX_NAME_LENGTH);
+  function persistPotName(value: string) {
+    const next = value.trim().slice(0, MAX_NAME_LENGTH);
+    const prev = window.localStorage.getItem(POT_NAME_KEY)?.trim() ?? "";
     if (!next) {
       showToast("화분 이름을 입력해 주세요");
+      return;
+    }
+    if (next === prev) {
+      setPotName(next);
       return;
     }
     setPotName(next);
@@ -134,10 +139,7 @@ export default function SettingsPage() {
             )}
           </section>
 
-          <form
-            onSubmit={handleSaveNickname}
-            className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm"
-          >
+          <section className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm">
             <label
               htmlFor="user-nickname"
               className="block text-sm font-semibold text-[#4a5248]"
@@ -145,7 +147,7 @@ export default function SettingsPage() {
               유저 닉네임
             </label>
             <p className="mt-1 text-xs leading-relaxed text-[#8ba4b4]">
-              정원에서 부를 당신의 이름이에요
+              정원에서 부를 당신의 이름이에요. 입력을 마치면 자동으로 저장됩니다.
             </p>
             <input
               id="user-nickname"
@@ -154,29 +156,19 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setNickname(e.target.value.slice(0, MAX_NAME_LENGTH))
               }
+              onBlur={() => persistNickname(nickname)}
               maxLength={MAX_NAME_LENGTH}
               placeholder="예: 정원사, 마음이"
               disabled={!hydrated}
               className="mt-3 w-full rounded-2xl border border-[#e8e0d4] bg-white px-4 py-3 text-base text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25 disabled:opacity-60"
               autoComplete="off"
             />
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-[11px] text-[#8ba4b4]">
-                {nickname.trim().length}/{MAX_NAME_LENGTH}
-              </p>
-              <button
-                type="submit"
-                className="rounded-xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-[0.98]"
-              >
-                저장
-              </button>
-            </div>
-          </form>
+            <p className="mt-2 text-[11px] text-[#8ba4b4]">
+              {nickname.trim().length}/{MAX_NAME_LENGTH}
+            </p>
+          </section>
 
-          <form
-            onSubmit={handleSavePotName}
-            className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm"
-          >
+          <section className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm">
             <label
               htmlFor="settings-pot-name"
               className="block text-sm font-semibold text-[#4a5248]"
@@ -184,7 +176,7 @@ export default function SettingsPage() {
               주인공 화분 이름
             </label>
             <p className="mt-1 text-xs leading-relaxed text-[#8ba4b4]">
-              함께 키우는 새싹의 이름이에요
+              함께 키우는 새싹의 이름이에요. 입력을 마치면 자동으로 저장됩니다.
             </p>
             <input
               id="settings-pot-name"
@@ -193,25 +185,17 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setPotName(e.target.value.slice(0, MAX_NAME_LENGTH))
               }
+              onBlur={() => persistPotName(potName)}
               maxLength={MAX_NAME_LENGTH}
               placeholder="예: 몽실이, 햇살"
               disabled={!hydrated}
               className="mt-3 w-full rounded-2xl border border-[#e8e0d4] bg-white px-4 py-3 text-base text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25 disabled:opacity-60"
               autoComplete="off"
             />
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-[11px] text-[#8ba4b4]">
-                {potName.trim().length}/{MAX_NAME_LENGTH}
-              </p>
-              <button
-                type="submit"
-                disabled={!potName.trim()}
-                className="rounded-xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                저장
-              </button>
-            </div>
-          </form>
+            <p className="mt-2 text-[11px] text-[#8ba4b4]">
+              {potName.trim().length}/{MAX_NAME_LENGTH}
+            </p>
+          </section>
 
           <section className="rounded-2xl border border-[#e8e0d4] bg-white/85 p-4 shadow-sm">
             <div className="flex items-center justify-between gap-4">

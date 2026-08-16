@@ -8,7 +8,9 @@ import { PotionBadge } from "@/components/PotionBadge";
 import { PotionIcon } from "@/components/PotionIcon";
 import { RootStrengthenMode } from "@/components/RootStrengthenMode";
 import { BackgroundSceneOverlay } from "@/components/BackgroundPreview";
+import { ItemDock } from "@/components/ItemDock";
 import { SproutCharacter } from "@/components/SproutCharacter";
+import { StoreDock } from "@/components/StoreDock";
 import { WateringCan } from "@/components/WateringCan";
 import { formatDateKey, getDayMessages, saveDayMessages } from "@/lib/chat-history";
 import { completeDailyQuest } from "@/lib/daily-quests";
@@ -135,14 +137,13 @@ const QUICK_EMOJIS: { emoji: string; tone: "positive" | "negative" }[] = [
   { emoji: "😡", tone: "negative" },
 ];
 
-type MenuItemId = "journey" | "store" | "item" | "calendar" | "settings";
+type MenuItemId = "journey" | "calendar" | "settings";
+type DockTab = "chat" | "store" | "item";
 
-const MENU_ITEMS: { id: MenuItemId; label: string }[] = [
-  { id: "journey", label: "Journey" },
-  { id: "store", label: "Store" },
-  { id: "item", label: "Item" },
-  { id: "calendar", label: "Calendar" },
-  { id: "settings", label: "Settings" },
+const DOCK_TABS: { id: DockTab; label: string }[] = [
+  { id: "chat", label: "채팅" },
+  { id: "store", label: "상점" },
+  { id: "item", label: "아이템" },
 ];
 
 function MenuIcon({ id }: { id: MenuItemId }) {
@@ -160,40 +161,6 @@ function MenuIcon({ id }: { id: MenuItemId }) {
             strokeLinejoin="round"
           />
           <circle cx="9" cy="5" r="1.5" fill="currentColor" />
-        </svg>
-      );
-    case "store":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-          <path
-            d="M5 9h14l-1.2 11H6.2L5 9Z"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M8 9V7a4 4 0 0 1 8 0v2"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "item":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-          <path
-            d="M12 3 20 7v10l-8 4-8-4V7l8-4Z"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M12 11v10M4.5 7.5 12 11l7.5-3.5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
         </svg>
       );
     case "calendar":
@@ -247,7 +214,7 @@ export default function Home() {
   const plantMoodTimerRef = useRef<number | null>(null);
   const [hpGlow, setHpGlow] = useState<"none" | "up" | "down">("none");
   const [watering, setWatering] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [dockTab, setDockTab] = useState<DockTab>("chat");
   const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
   const [potSkinId, setPotSkinId] = useState<PotSkinId>("default");
   const [wiltedByNegative, setWiltedByNegative] = useState(false);
@@ -336,12 +303,13 @@ export default function Home() {
     };
   }, []);
 
-  // Journey 지하 여정 등에서 /?openRoot=1 로 오면 뿌리 강화 모드를 바로 연다.
+  // Journey / 상점 탭 딥링크
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("openRoot") !== "1") return;
-    setShowRootMode(true);
-    window.history.replaceState({}, "", "/");
+    const tab = params.get("tab");
+    if (tab === "store" || tab === "item") setDockTab(tab);
+    if (params.get("openRoot") === "1") setShowRootMode(true);
+    if (params.toString()) window.history.replaceState({}, "", "/");
   }, []);
 
   // 화분 레벨/HP는 Journey 지도가 실제 성장 이력을 보여줄 수 있도록 저장해둔다.
@@ -369,7 +337,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!plantHydrated) return;
-    setPlantState({ level, hp, wiltedByNegative });
+    setPlantState({ level, hp, wiltedByNegative }, { skipEvent: true });
   }, [level, hp, wiltedByNegative, plantHydrated]);
 
   useEffect(() => {
@@ -911,8 +879,16 @@ export default function Home() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="root-guide-title"
-              className="touch-guide-enter w-full max-w-sm rounded-3xl border border-[#e8e0d4] bg-[#FDFBF7] p-6 shadow-xl"
+              className="touch-guide-enter relative w-full max-w-sm rounded-3xl border border-[#e8e0d4] bg-[#FDFBF7] p-6 shadow-xl"
             >
+              <button
+                type="button"
+                onClick={() => dismissRootGuide(false)}
+                aria-label="닫기"
+                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-[#8ba4b4] transition hover:bg-[#f5f0e8] hover:text-[#4a5248]"
+              >
+                ×
+              </button>
               <p className="text-[11px] font-semibold tracking-[0.2em] text-[#6d8a5e]">
                 LEVEL UP · ROOT MODE
               </p>
@@ -967,20 +943,13 @@ export default function Home() {
                 버튼으로 언제든 다시 들어갈 수 있어요.
               </p>
 
-              <div className="mt-5 flex flex-col gap-2">
+              <div className="mt-5">
                 <button
                   type="button"
                   onClick={() => dismissRootGuide(true)}
                   className="w-full rounded-2xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-[0.98]"
                 >
                   뿌리 강화하러 가기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => dismissRootGuide(false)}
-                  className="w-full rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-3 text-sm font-medium text-[#6d655c] transition hover:bg-white active:scale-[0.98]"
-                >
-                  나중에 할게요
                 </button>
               </div>
             </div>
@@ -999,85 +968,49 @@ export default function Home() {
         </div>
 
         <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label="메뉴 열기"
-            aria-expanded={menuOpen}
-            className="absolute left-4 top-[max(1.25rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm backdrop-blur-sm transition hover:bg-white sm:left-6 sm:top-8"
-          >
-            <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
-            <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
-            <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
-          </button>
-
-          {menuOpen && (
-            <>
-              <button
-                type="button"
-                aria-label="메뉴 닫기"
-                className="fixed inset-0 z-40 bg-[#4a5248]/20"
-                onClick={() => setMenuOpen(false)}
-              />
-              <nav className="absolute left-4 top-[calc(max(1.25rem,env(safe-area-inset-top))+3rem)] z-50 w-52 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md sm:left-6 sm:top-[calc(2rem+3rem)]">
-                <ul className="p-2">
-                  {MENU_ITEMS.map((item) => (
-                    <li key={item.id}>
-                      {item.id === "calendar" ? (
-                        <Link
-                          href="/calendar"
-                          onClick={() => setMenuOpen(false)}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
-                        >
-                          <MenuIcon id={item.id} />
-                          Emotion calendar
-                        </Link>
-                      ) : (
-                        <Link
-                          href={
-                            item.id === "journey"
-                              ? "/journey"
-                              : item.id === "store"
-                                ? "/store"
-                                : item.id === "item"
-                                  ? "/item"
-                                  : "/settings"
-                          }
-                          onClick={() => setMenuOpen(false)}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
-                        >
-                          <MenuIcon id={item.id} />
-                          {item.label}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </>
-          )}
-
           {/* ── 상단: 레벨 & HP ── */}
           <header className="shrink-0 space-y-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 flex-1 items-center gap-3 pl-1 sm:gap-4 sm:pl-0">
-                <div className="w-10 shrink-0" aria-hidden />
-                <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Link
+                  href="/journey"
+                  aria-label="여정"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm transition hover:bg-white"
+                >
+                  <MenuIcon id="journey" />
+                </Link>
+                <Link
+                  href="/calendar"
+                  aria-label="감정 달력"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm transition hover:bg-white"
+                >
+                  <MenuIcon id="calendar" />
+                </Link>
+                <div className="min-w-0">
                   <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
                     HEALING GARDEN
                   </p>
-                  <h1 className="text-xl font-bold text-[#4a5248] sm:text-2xl">
+                  <h1 className="truncate text-lg font-bold text-[#4a5248] sm:text-xl">
                     마음의 화분
                   </h1>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Link
+                  href="/settings"
+                  aria-label="설정"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm transition hover:bg-white"
+                >
+                  <MenuIcon id="settings" />
+                </Link>
                 <PotionBadge />
-                <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-4 py-2 shadow-sm backdrop-blur-sm">
+                <div className="rounded-2xl border border-[#e8dcc8] bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-sm sm:px-4 sm:py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-[#e8a598]">
                     Mind level
                   </p>
-                  <p className="text-2xl font-bold text-[#6d8a5e]">Lv.{level}</p>
+                  <p className="text-xl font-bold text-[#6d8a5e] sm:text-2xl">
+                    Lv.{level}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1327,102 +1260,126 @@ export default function Home() {
             )}
           </main>
 
-          {/* ── 하단: 채팅창 ── */}
-          <footer className="mt-2 shrink-0 overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md">
-            <div className="border-b border-[#ede8df] bg-gradient-to-r from-[#f5f0e8]/80 to-white/60 px-4 py-3">
-              <p className="text-sm font-semibold text-[#4a5248]">
-                마음 기록장
-              </p>
-              <p className="mt-0.5 text-xs text-[#8ba4b4]">
-                긍정의 말 → 성장 · 부정의 말 → 받아줄게요
-              </p>
-            </div>
-
-            <div className="flex max-h-40 min-h-28 flex-col gap-2 overflow-y-auto px-3 py-3 sm:max-h-48 sm:min-h-32">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <p
-                    className={`max-w-[90%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed sm:max-w-[80%] sm:text-sm ${
-                      msg.from === "bot"
-                        ? "rounded-bl-md bg-[#f0ebe3] text-[#4a5248]"
-                        : msg.tone === "positive"
-                          ? "rounded-br-md bg-[#9caf88]/25 text-[#3d5235]"
-                          : msg.tone === "negative"
-                            ? "rounded-br-md bg-[#a3bcc9]/30 text-[#3a4a52]"
-                            : "rounded-br-md bg-[#e8e0d4]/70 text-[#4a5248]"
-                    }`}
-                  >
-                    {msg.text}
-                  </p>
-                </div>
-              ))}
-              {isBotTyping && (
-                <div className="flex justify-start">
-                  <p className="rounded-2xl rounded-bl-md bg-[#f0ebe3] px-3.5 py-2 text-[13px] text-[#8ba4b4] sm:text-sm">
-                    마음을 담아 답하는 중…
-                  </p>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* 빠른 입력 힌트 */}
-            <div className="flex flex-wrap items-center gap-1.5 border-t border-[#ede8df]/60 px-3 py-2">
-              {QUICK_HINTS.map((hint) => (
+          {/* ── 하단: 채팅 / 상점 / 아이템 ── */}
+          <footer className="mt-2 flex min-h-[16.5rem] flex-col overflow-hidden rounded-3xl border border-[#e8e0d4] bg-white/90 shadow-lg backdrop-blur-md sm:min-h-[18.5rem]">
+            <div
+              role="tablist"
+              aria-label="하단 패널"
+              className="flex shrink-0 border-b border-[#ede8df] bg-gradient-to-r from-[#f5f0e8]/80 to-white/60 p-1.5"
+            >
+              {DOCK_TABS.map((tab) => (
                 <button
-                  key={hint}
+                  key={tab.id}
                   type="button"
-                  onClick={() => sendHint(hint)}
-                  disabled={isBotTyping}
-                  className="rounded-full border border-[#e8dcc8] bg-[#FDFBF7] px-3 py-1 text-[11px] font-medium text-[#6d8a5e] transition hover:border-[#9caf88] hover:bg-[#9caf88]/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:text-xs"
-                >
-                  {hint}
-                </button>
-              ))}
-              {QUICK_EMOJIS.map(({ emoji, tone }) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => sendEmoji(emoji, tone)}
-                  disabled={isBotTyping}
-                  aria-label={
-                    tone === "positive" ? `긍정 이모지 ${emoji}` : `부정 이모지 ${emoji}`
-                  }
-                  className={`rounded-full border bg-[#FDFBF7] px-2.5 py-1 text-base leading-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
-                    tone === "positive"
-                      ? "border-[#d4e4c8] hover:border-[#9caf88] hover:bg-[#9caf88]/10"
-                      : "border-[#d8e2e8] hover:border-[#a3bcc9] hover:bg-[#a3bcc9]/15"
+                  role="tab"
+                  aria-selected={dockTab === tab.id}
+                  onClick={() => setDockTab(tab.id)}
+                  className={`flex-1 rounded-2xl py-2 text-sm font-semibold transition ${
+                    dockTab === tab.id
+                      ? "bg-white text-[#4a5248] shadow-sm"
+                      : "text-[#8ba4b4] hover:text-[#6d8a5e]"
                   }`}
                 >
-                  {emoji}
+                  {tab.label}
                 </button>
               ))}
             </div>
 
-            <form
-              onSubmit={sendMessage}
-              className="flex gap-2 border-t border-[#ede8df] p-3"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="지금 마음을 적어 보세요…"
-                className="min-w-0 flex-1 rounded-2xl border border-[#e8e0d4] bg-[#FDFBF7] px-4 py-3 text-base text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25"
-                aria-label="메시지 입력"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isBotTyping}
-                className="shrink-0 rounded-2xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-5"
-              >
-                보내기
-              </button>
-            </form>
+            {dockTab === "chat" && (
+              <>
+                <div className="flex max-h-40 min-h-28 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3 sm:max-h-48">
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <p
+                        className={`max-w-[90%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed sm:max-w-[80%] sm:text-sm ${
+                          msg.from === "bot"
+                            ? "rounded-bl-md bg-[#f0ebe3] text-[#4a5248]"
+                            : msg.tone === "positive"
+                              ? "rounded-br-md bg-[#9caf88]/25 text-[#3d5235]"
+                              : msg.tone === "negative"
+                                ? "rounded-br-md bg-[#a3bcc9]/30 text-[#3a4a52]"
+                                : "rounded-br-md bg-[#e8e0d4]/70 text-[#4a5248]"
+                        }`}
+                      >
+                        {msg.text}
+                      </p>
+                    </div>
+                  ))}
+                  {isBotTyping && (
+                    <div className="flex justify-start">
+                      <p className="rounded-2xl rounded-bl-md bg-[#f0ebe3] px-3.5 py-2 text-[13px] text-[#8ba4b4] sm:text-sm">
+                        마음을 담아 답하는 중…
+                      </p>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 border-t border-[#ede8df]/60 px-3 py-2">
+                  {QUICK_HINTS.map((hint) => (
+                    <button
+                      key={hint}
+                      type="button"
+                      onClick={() => sendHint(hint)}
+                      disabled={isBotTyping}
+                      className="rounded-full border border-[#e8dcc8] bg-[#FDFBF7] px-3 py-1 text-[11px] font-medium text-[#6d8a5e] transition hover:border-[#9caf88] hover:bg-[#9caf88]/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:text-xs"
+                    >
+                      {hint}
+                    </button>
+                  ))}
+                  {QUICK_EMOJIS.map(({ emoji, tone }) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => sendEmoji(emoji, tone)}
+                      disabled={isBotTyping}
+                      aria-label={
+                        tone === "positive"
+                          ? `긍정 이모지 ${emoji}`
+                          : `부정 이모지 ${emoji}`
+                      }
+                      className={`rounded-full border bg-[#FDFBF7] px-2.5 py-1 text-base leading-none transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${
+                        tone === "positive"
+                          ? "border-[#d4e4c8] hover:border-[#9caf88] hover:bg-[#9caf88]/10"
+                          : "border-[#d8e2e8] hover:border-[#a3bcc9] hover:bg-[#a3bcc9]/15"
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+
+                <form
+                  onSubmit={sendMessage}
+                  className="flex gap-2 border-t border-[#ede8df] p-3"
+                >
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="지금 마음을 적어 보세요…"
+                    className="min-w-0 flex-1 rounded-2xl border border-[#e8e0d4] bg-[#FDFBF7] px-4 py-3 text-base text-[#4a5248] outline-none transition placeholder:text-[#b5aea3] focus:border-[#9caf88] focus:ring-2 focus:ring-[#9caf88]/25"
+                    aria-label="메시지 입력"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || isBotTyping}
+                    className="shrink-0 rounded-2xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-5"
+                  >
+                    보내기
+                  </button>
+                </form>
+              </>
+            )}
+
+            {dockTab === "store" && <StoreDock />}
+            {dockTab === "item" && (
+              <ItemDock onOpenStore={() => setDockTab("store")} />
+            )}
           </footer>
         </div>
       </div>

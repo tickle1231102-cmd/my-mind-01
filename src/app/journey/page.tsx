@@ -120,6 +120,13 @@ export default function JourneyPage() {
   }
 
   function openMilestone(milestone: JourneyMilestone) {
+    if (
+      milestone.achieved &&
+      milestone.potionReward > 0 &&
+      !claimedIds.has(milestone.id)
+    ) {
+      handleClaim(milestone);
+    }
     setSelected(milestone);
     if (milestone.achieved && milestone.memorySessionId) {
       setSelectedMemory(getSessionById(milestone.memorySessionId));
@@ -187,7 +194,7 @@ export default function JourneyPage() {
               {isUnderground ? "뿌리의 여정길" : "마음의 여정길"}
             </h1>
           </div>
-          <PotionBadge href="/journey" />
+          <PotionBadge href={null} />
         </header>
 
         {!undergroundUnlocked && !isUnderground && (
@@ -200,7 +207,7 @@ export default function JourneyPage() {
               지하 여정길이 열려요.
             </p>
             <Link
-              href="/"
+              href="/?openRoot=1"
               className="mt-3 inline-flex items-center rounded-xl bg-[#8a7355] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#7a6548] active:scale-95"
             >
               뿌리 강화 시작하기
@@ -448,21 +455,25 @@ export default function JourneyPage() {
             )}
 
             {selected.achieved && selected.potionReward > 0 && (
-              <button
-                type="button"
-                onClick={() => handleClaim(selected)}
-                disabled={claimedIds.has(selected.id)}
-                className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:from-[#cfd6c8] disabled:to-[#cfd6c8] ${
-                  isUnderground
-                    ? "bg-gradient-to-b from-[#a89880] to-[#8a7355] hover:from-[#9a8b74] hover:to-[#7a6548]"
-                    : "bg-gradient-to-b from-[#9caf88] to-[#7a9168] hover:from-[#8fad7a] hover:to-[#6d8a5e]"
-                }`}
-              >
-                <PotionIcon className="h-4 w-4" />
-                {claimedIds.has(selected.id)
-                  ? "포션 획득 완료"
-                  : `포션 ${selected.potionReward}개 받기`}
-              </button>
+              claimedIds.has(selected.id) ? (
+                <p className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-[#9caf88]/15 px-4 py-3 text-sm font-bold text-[#6d8a5e]">
+                  <PotionIcon className="h-4 w-4" />
+                  포션 {selected.potionReward}개를 받았어요
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleClaim(selected)}
+                  className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.98] ${
+                    isUnderground
+                      ? "bg-gradient-to-b from-[#a89880] to-[#8a7355] hover:from-[#9a8b74] hover:to-[#7a6548]"
+                      : "bg-gradient-to-b from-[#9caf88] to-[#7a9168] hover:from-[#8fad7a] hover:to-[#6d8a5e]"
+                  }`}
+                >
+                  <PotionIcon className="h-4 w-4" />
+                  포션 {selected.potionReward}개 받기
+                </button>
+              )
             )}
 
             {!selected.achieved && isUnderground && (
@@ -515,7 +526,7 @@ export default function JourneyPage() {
               강화를 한 번 시작하면 후회와 감사가 쌓인 지하 여정길이 열립니다.
             </p>
             <Link
-              href="/"
+              href="/?openRoot=1"
               onClick={() => setShowLockGuide(false)}
               className="mt-5 flex w-full items-center justify-center rounded-2xl bg-gradient-to-b from-[#a89880] to-[#8a7355] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#9a8b74] hover:to-[#7a6548] active:scale-[0.98]"
             >

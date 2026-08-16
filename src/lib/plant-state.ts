@@ -36,11 +36,13 @@ export function getPlantState(): PlantState {
 
 export function setPlantState(
   state: PlantState,
-  options?: { skipCloud?: boolean },
+  options?: { skipCloud?: boolean; skipEvent?: boolean },
 ) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(PLANT_STATE_KEY, JSON.stringify(state));
-  window.dispatchEvent(new Event(PLANT_STATE_CHANGE_EVENT));
+  if (!options?.skipEvent) {
+    window.dispatchEvent(new Event(PLANT_STATE_CHANGE_EVENT));
+  }
   if (!options?.skipCloud) {
     void import("@/lib/cloud-sync").then((m) => m.scheduleCloudSave());
   }

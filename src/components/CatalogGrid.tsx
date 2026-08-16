@@ -113,7 +113,7 @@ export function CatalogSelectionBar({
   action,
 }: CatalogSelectionBarProps) {
   return (
-    <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[#e8e0d4] bg-[#FDFBF7]/95 px-3.5 py-3 shadow-sm">
+    <div className="flex items-center gap-3 rounded-2xl border border-[#e8e0d4] bg-[#FDFBF7]/95 px-3.5 py-3 shadow-sm">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-[#4a5248]">{title}</p>
         {subtitle && (

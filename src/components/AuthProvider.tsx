@@ -22,34 +22,70 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("auth timeout")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => {
+    try {
+      return createClient();
+    } catch {
+      return null;
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
-    const {
-      data: { user: next },
-    } = await supabase.auth.getUser();
-    setUser(next);
+    if (!supabase) return;
+    try {
+      const {
+        data: { user: next },
+      } = await withTimeout(supabase.auth.getUser(), 4000);
+      setUser(next);
+    } catch (error) {
+      console.error("[mind] auth refresh failed", error);
+    }
   }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
 
     async function init() {
-      const {
-        data: { user: next },
-      } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setUser(next);
-      setLoading(false);
-      if (next) {
-        await hydrateGameFromCloud();
+      if (!supabase) {
+        if (mounted) setLoading(false);
+        return;
+      }
+      try {
+        const {
+          data: { user: next },
+        } = await withTimeout(supabase.auth.getUser(), 4000);
+        if (!mounted) return;
+        setUser(next);
+        if (next) await hydrateGameFromCloud();
+      } catch (error) {
+        console.error("[mind] auth init failed", error);
+      } finally {
+        if (mounted) setLoading(false);
       }
     }
 
     void init();
+
+    if (!supabase) return () => { mounted = false; };
 
     const {
       data: { subscription },
@@ -59,13 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       if (
         next &&
-        (event === "SIGNED_IN" ||
-          event === "INITIAL_SESSION" ||
-          event === "TOKEN_REFRESHED")
+        (event === "SIGNED_IN" || event === "INITIAL_SESSION")
       ) {
-        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-          await hydrateGameFromCloud();
-        }
+        await hydrateGameFromCloud();
       }
     });
 
@@ -76,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
     setUser(null);
   }, [supabase]);
 
