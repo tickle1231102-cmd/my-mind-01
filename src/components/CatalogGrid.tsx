@@ -72,16 +72,18 @@ export function CatalogCell({
       onClick={onClick}
       aria-label={ariaLabel}
       aria-pressed={selected}
-      className={`relative flex flex-col items-center gap-1.5 px-1 py-3 transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 ${
-        selected
-          ? "rounded-2xl ring-2 ring-[#9caf88] ring-offset-2 ring-offset-[#F5F0E8]"
-          : ""
-      }`}
+      className={`relative flex flex-col items-center gap-1.5 px-1 py-2.5 transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-45`}
     >
-      <span className="relative flex h-16 w-16 items-center justify-center sm:h-[4.5rem] sm:w-[4.5rem]">
+      <span
+        className={`relative flex h-14 w-14 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${
+          selected
+            ? "ring-2 ring-[#9caf88] ring-offset-2 ring-offset-[#F5F0E8]"
+            : ""
+        }`}
+      >
         {preview}
         {badge && (
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-[#e8dcc8] bg-white shadow-sm">
+          <span className="absolute -bottom-0.5 -right-0.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-[#e8dcc8] bg-white shadow-sm">
             {badge}
           </span>
         )}

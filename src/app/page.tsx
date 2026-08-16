@@ -69,6 +69,7 @@ function randomOf<T>(arr: T[]): T {
 const POT_NAME_KEY = "healing-garden-pot-name";
 const POT_TOUCH_GUIDE_KEY = "healing-garden-pot-touch-guide";
 const ROOT_GUIDE_KEY = "healing-garden-root-guide";
+const PLAY_HINT_KEY = "healing-garden-play-hint";
 const MAX_POT_NAME_LENGTH = 10;
 
 /** 이름 뒤에 을/를 조사 붙이기 */
@@ -227,6 +228,7 @@ export default function Home() {
   const [nameDraft, setNameDraft] = useState("");
   const [showWelcome, setShowWelcome] = useState(false);
   const [showPotTouchGuide, setShowPotTouchGuide] = useState(false);
+  const [showPlayHint, setShowPlayHint] = useState(false);
   const [potGuideLeaving, setPotGuideLeaving] = useState(false);
   const [showRootGuide, setShowRootGuide] = useState(false);
   const [potBubble, setPotBubble] = useState<string | null>(null);
@@ -350,7 +352,14 @@ export default function Home() {
     const savedName = window.localStorage.getItem(POT_NAME_KEY)?.trim() ?? "";
     if (savedName) {
       setPotName(savedName);
-      if (window.localStorage.getItem(POT_TOUCH_GUIDE_KEY) !== "done") {
+      const hintDone = window.localStorage.getItem(PLAY_HINT_KEY) === "done";
+      const touchDone =
+        window.localStorage.getItem(POT_TOUCH_GUIDE_KEY) === "done";
+      if (!hintDone && !touchDone) {
+        setShowPlayHint(true);
+      } else if (!hintDone && touchDone) {
+        window.localStorage.setItem(PLAY_HINT_KEY, "done");
+      } else if (!touchDone) {
         setShowPotTouchGuide(true);
       }
     } else {
@@ -366,7 +375,11 @@ export default function Home() {
 
   useEffect(() => {
     const paused =
-      showWelcome || showPotTouchGuide || showRootMode || showRootGuide;
+      showWelcome ||
+      showPlayHint ||
+      showPotTouchGuide ||
+      showRootMode ||
+      showRootGuide;
     if (paused) {
       if (potBubbleScheduleRef.current) {
         clearTimeout(potBubbleScheduleRef.current);
@@ -436,7 +449,7 @@ export default function Home() {
         potBubbleHideTimerRef.current = null;
       }
     };
-  }, [showWelcome, showPotTouchGuide, showRootMode, showRootGuide, potName]);
+  }, [showWelcome, showPlayHint, showPotTouchGuide, showRootMode, showRootGuide, potName]);
 
   useEffect(() => {
     const audio = new Audio("/sounds/pop11.mp3");
@@ -499,8 +512,16 @@ export default function Home() {
     window.localStorage.setItem(POT_NAME_KEY, name);
     setPotName(name);
     setShowWelcome(false);
-    setShowPotTouchGuide(true);
+    setShowPlayHint(true);
     ensurePlaying();
+  }
+
+  function dismissPlayHint() {
+    window.localStorage.setItem(PLAY_HINT_KEY, "done");
+    setShowPlayHint(false);
+    if (window.localStorage.getItem(POT_TOUCH_GUIDE_KEY) !== "done") {
+      setShowPotTouchGuide(true);
+    }
   }
 
   function triggerWatering() {
@@ -926,6 +947,40 @@ export default function Home() {
           </div>
         )}
 
+        {showPlayHint && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#4a5248]/35 px-5 backdrop-blur-[3px]">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="play-hint-title"
+              className="touch-guide-enter w-full max-w-sm rounded-3xl border border-[#e8e0d4] bg-[#FDFBF7] p-6 shadow-xl"
+            >
+              <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
+                HEALING GARDEN
+              </p>
+              <h2
+                id="play-hint-title"
+                className="mt-1 text-xl font-bold text-[#4a5248]"
+              >
+                이렇게 키워요
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-[#6d655c]">
+                긍정의 말 한마디가 씨앗을 깨워요.
+                <br />
+                {potName ? withEulReul(potName) : "씨앗을"} 터치해 물도 줄 수
+                있어요.
+              </p>
+              <button
+                type="button"
+                onClick={dismissPlayHint}
+                className="mt-5 w-full rounded-2xl bg-gradient-to-b from-[#9caf88] to-[#7a9168] px-4 py-3 text-sm font-bold text-white shadow-md transition hover:from-[#8fad7a] hover:to-[#6d8a5e] active:scale-[0.98]"
+              >
+                알겠어요
+              </button>
+            </div>
+          </div>
+        )}
+
         {showRootGuide && (
           <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#4a5248]/35 px-5 backdrop-blur-[3px]">
             <div
@@ -1022,7 +1077,7 @@ export default function Home() {
 
         <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
           {/* ── 상단: 레벨 & HP ── */}
-          <header className="shrink-0 space-y-2.5">
+          <header className="shrink-0 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Link
@@ -1060,21 +1115,21 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-stretch gap-2">
+            <div className="flex items-stretch gap-1.5">
               <div
-                className={`flex shrink-0 flex-col justify-center rounded-2xl border border-[#e8dcc8] bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm sm:px-3.5 ${
+                className={`flex shrink-0 flex-col justify-center rounded-xl border border-[#e8dcc8] bg-white/80 px-2.5 py-1 shadow-sm backdrop-blur-sm sm:px-3 ${
                   levelUpBurst != null ? "level-up-stat-pulse" : ""
                 }`}
               >
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#e8a598]">
+                <p className="text-[8px] font-semibold uppercase tracking-wider text-[#e8a598]">
                   Mind level
                 </p>
-                <p className="text-sm font-bold leading-none text-[#6d8a5e] sm:text-base">
+                <p className="text-xs font-bold leading-none text-[#6d8a5e] sm:text-sm">
                   Lv.{level}
                 </p>
               </div>
               <div
-                className={`min-w-0 flex-1 rounded-2xl border border-[#e8e0d4] bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm transition-shadow duration-500 sm:px-4 ${
+                className={`min-w-0 flex-1 rounded-xl border border-[#e8e0d4] bg-white/80 px-2.5 py-1 shadow-sm backdrop-blur-sm transition-shadow duration-500 sm:px-3 ${
                   hpGlow === "up"
                     ? "hp-glow-up"
                     : hpGlow === "down"
@@ -1082,13 +1137,13 @@ export default function Home() {
                       : ""
                 }`}
               >
-                <div className="mb-1.5 flex items-center justify-between text-sm">
+                <div className="mb-0.5 flex items-center justify-between text-[11px] leading-none">
                   <span className="font-semibold text-[#6d8a5e]">HP</span>
                   <span className="tabular-nums font-medium text-[#4a5248]">
                     {hp} / {MAX_HP}
                   </span>
                 </div>
-                <div className="h-4 overflow-hidden rounded-full bg-[#ede8df] shadow-inner sm:h-5">
+                <div className="h-2 overflow-hidden rounded-full bg-[#ede8df] shadow-inner sm:h-2.5">
                   <div
                     className="h-full rounded-full transition-all duration-700 ease-out"
                     style={{ width: `${hpPercent}%`, backgroundColor: barColor }}
@@ -1230,11 +1285,6 @@ export default function Home() {
             )}
             <p className="mt-1 max-w-xs self-center rounded-full border border-[#e8dcc8] bg-white/80 px-5 py-1.5 text-center text-sm font-medium leading-relaxed text-[#6d8a5e] shadow-sm">
               {getPlantStatus(hp, level, wiltedByNegative)}
-            </p>
-            <p className="mt-1 text-center text-xs text-[#8ba4b4]">
-              {isSeedStage
-                ? `긍정의 말 한마디가 씨앗을 깨워요 · ${potName ? withEulReul(potName) : "씨앗을"} 터치해 물도 줄 수 있어요`
-                : `긍정의 말 한마디가 씨앗을 깨워요 · ${potName ? withEulReul(potName) : "화분을"} 터치해 물도 줄 수 있어요`}
             </p>
 
             {!isSeedStage && (

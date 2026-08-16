@@ -137,10 +137,10 @@ export function ItemDock({ onOpenStore }: { onOpenStore: () => void }) {
                     }
                     onClick={() => applyPotSkin(skin.id)}
                     preview={
-                      <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#e8dcc8] bg-white shadow-sm sm:h-16 sm:w-16">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white shadow-sm sm:h-11 sm:w-11">
                         <PotSkinPreview
                           skinId={skin.id}
-                          className="h-11 w-10"
+                          className="h-8 w-7"
                         />
                       </span>
                     }
@@ -198,7 +198,7 @@ function BackgroundCell({
         <BackgroundPreview
           background={bg}
           size="tile"
-          className="!rounded-2xl shadow-sm"
+          className="!rounded-lg shadow-sm"
         />
       }
       label={bg.label}

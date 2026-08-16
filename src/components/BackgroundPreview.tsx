@@ -14,7 +14,7 @@ const SIZE_CLASS = {
   sm: "h-14 w-20",
   md: "h-20 w-28",
   lg: "h-24 w-full",
-  tile: "h-14 w-14 sm:h-16 sm:w-16",
+  tile: "h-10 w-10 sm:h-11 sm:w-11",
 };
 
 type Particle = {
@@ -117,9 +117,35 @@ const SNOW_FULL: Particle[] = [
   { left: "92%", size: 3, duration: 8.8, delay: 2.6, drift: -16 },
   { left: "16%", size: 2, duration: 11.4, delay: 3.1, drift: 12, opacity: 0.45 },
   { left: "72%", size: 4, duration: 7.8, delay: 3.5, drift: -22 },
+  { left: "8%", size: 3, duration: 9.2, delay: 4.0, drift: 20 },
+  { left: "40%", size: 2.5, duration: 10.2, delay: 2.8, drift: -14 },
+  { left: "88%", size: 4, duration: 7.1, delay: 3.8, drift: 10 },
 ];
 
-const SNOW_PREVIEW = SNOW_FULL.slice(0, 7);
+const SNOW_PREVIEW = SNOW_FULL.slice(0, 8);
+
+const PANE_DROPS_FULL: Particle[] = [
+  { left: "16%", top: "20%", size: 5, duration: 4.6, delay: 0.2 },
+  { left: "24%", top: "34%", size: 3.5, duration: 5.2, delay: 1.1 },
+  { left: "31%", top: "18%", size: 4, duration: 4.1, delay: 2.4 },
+  { left: "39%", top: "42%", size: 6, duration: 5.8, delay: 0.6 },
+  { left: "47%", top: "26%", size: 3, duration: 4.9, delay: 1.8 },
+  { left: "54%", top: "48%", size: 4.5, duration: 5.4, delay: 0.9 },
+  { left: "62%", top: "22%", size: 3.5, duration: 4.3, delay: 2.1 },
+  { left: "69%", top: "37%", size: 5.5, duration: 5.6, delay: 0.4 },
+  { left: "76%", top: "19%", size: 4, duration: 4.7, delay: 1.5 },
+  { left: "83%", top: "31%", size: 3, duration: 5.1, delay: 2.7 },
+  { left: "21%", top: "52%", size: 3.5, duration: 4.4, delay: 1.3 },
+  { left: "72%", top: "54%", size: 4, duration: 5.9, delay: 0.8 },
+];
+
+const PANE_DROPS_PREVIEW = [
+  PANE_DROPS_FULL[0]!,
+  PANE_DROPS_FULL[3]!,
+  PANE_DROPS_FULL[6]!,
+  PANE_DROPS_FULL[8]!,
+  PANE_DROPS_FULL[11]!,
+];
 
 const FIREFLIES_FULL: Particle[] = [
   { left: "14%", top: "52%", size: 3, duration: 2.6, delay: 0 },
@@ -298,85 +324,13 @@ function renderSceneContent(sceneId: string, isFull: boolean) {
       );
 
     case "rainy-window":
-      return (
-        <>
-          {/* far: outdoor landscape behind glass */}
-          <span className="bg-fx-hill absolute bottom-[20%] left-[-8%] h-[26%] w-[52%] bg-[#6a8294]/40 blur-[2px]" />
-          <span className="bg-fx-hill absolute bottom-[18%] right-[-6%] h-[30%] w-[56%] bg-[#5f7a8c]/35 blur-[2px]" />
-          <span className="absolute bottom-[34%] left-[12%] h-[18%] w-[10%] rounded-t-full bg-[#4d6574]/30 blur-[1px]" />
-          <span className="absolute bottom-[36%] left-[22%] h-[14%] w-[8%] rounded-t-full bg-[#4d6574]/25 blur-[1px]" />
-          <span className="absolute bottom-[35%] right-[18%] h-[16%] w-[9%] rounded-t-full bg-[#4d6574]/28 blur-[1px]" />
-          <span
-            className="bg-fx-haze absolute left-[20%] top-[22%] h-[20%] w-[35%] bg-white/20"
-            style={{ animationDuration: "8s" }}
-          />
-
-          {/* mid: irregular rain (no even columns) */}
-          {(isFull ? RAIN_FULL : RAIN_PREVIEW).map((drop, i) => (
-            <span
-              key={`rain-${i}`}
-              className="bg-fx-raindrop"
-              style={
-                {
-                  left: drop.left,
-                  height: drop.size,
-                  width: drop.size > 22 ? 2 : 1.5,
-                  "--bg-drift": `${drop.drift ?? -10}px`,
-                  "--rain-opacity": drop.size > 22 ? 0.7 : 0.5,
-                  animationDuration: `${drop.duration}s`,
-                  animationDelay: `${drop.delay}s`,
-                } as CSSProperties
-              }
-            />
-          ))}
-
-          {/* near: window chrome — soft frame, no hard cross-grid mullions */}
-          <span className="bg-fx-window-frame" />
-          <span className="bg-fx-glass-sheen" />
-          <span className="absolute inset-y-[10%] left-[8%] w-[3%] rounded-sm bg-[#f5f0e8]/25" />
-          <span className="absolute inset-y-[10%] right-[8%] w-[3%] rounded-sm bg-[#f5f0e8]/20" />
-          <span className="absolute bottom-[6%] left-[8%] right-[8%] h-[8%] rounded-sm bg-[#e8e0d4]/45" />
-          <span className="absolute bottom-[10%] left-[14%] h-3 w-5 rounded-sm bg-[#9caf88]/35" />
-          <span className="absolute bottom-[10%] left-[22%] h-2.5 w-4 rounded-sm bg-[#e8a598]/30" />
-          <span className="pointer-events-none absolute bottom-0 left-0 right-0 h-[18%] bg-gradient-to-t from-[#f5f0e8]/50 to-transparent" />
-        </>
-      );
+      return <RainyWindowScene isFull={isFull} />;
 
     case "cherry-garden":
       return <CherryGardenScene isFull={isFull} />;
 
     case "first-snow":
-      return (
-        <>
-          <span
-            className="bg-fx-haze absolute left-[15%] top-[12%] h-[24%] w-[70%] bg-white/45"
-            style={{ animationDuration: "12s" }}
-          />
-          <span className="bg-fx-hill absolute bottom-[30%] left-[-6%] h-[18%] w-[45%] bg-[#9aafc0]/35 blur-[1.5px]" />
-          <span className="bg-fx-hill absolute bottom-[28%] right-[-8%] h-[20%] w-[50%] bg-[#8aa0b4]/30 blur-[1.5px]" />
-          <span className="bg-fx-hill absolute bottom-[26%] left-[28%] h-[14%] w-[38%] bg-[#a8bccc]/28 blur-[1px]" />
-          {(isFull ? SNOW_FULL : SNOW_PREVIEW).map((flake, i) => (
-            <span
-              key={`snow-${i}`}
-              className="bg-fx-snowflake"
-              style={
-                {
-                  left: flake.left,
-                  width: flake.size,
-                  height: flake.size,
-                  opacity: flake.opacity,
-                  filter: flake.blur ? `blur(${flake.blur}px)` : undefined,
-                  "--bg-drift": `${flake.drift ?? 16}px`,
-                  animationDuration: `${flake.duration}s`,
-                  animationDelay: `${flake.delay}s`,
-                } as CSSProperties
-              }
-            />
-          ))}
-          <span className="pointer-events-none absolute bottom-0 left-0 right-0 h-[34%] bg-gradient-to-t from-white/75 via-white/35 to-transparent" />
-          <span className="bg-fx-ground-glow absolute bottom-[6%] left-1/2 h-5 w-36 -translate-x-1/2 rounded-full bg-white/50 blur-md" />
-        </>
-      );
+      return <FirstSnowScene isFull={isFull} />;
 
     case "sunset-sea":
       return <SunsetSeaScene isFull={isFull} />;
@@ -1211,6 +1165,351 @@ function BookshelfSvg({
   );
 }
 
+/** 비 오는 창가 — 창밖 초원 + 유리 물방울 + 창틀·커튼·선반 화분 */
+function RainyWindowScene({ isFull }: { isFull: boolean }) {
+  return (
+    <>
+      <span
+        className="bg-fx-haze absolute left-[18%] top-[4%] h-[18%] w-[48%] bg-white/40"
+        style={{ animationDuration: "10s" }}
+      />
+      <span
+        className="bg-fx-haze absolute right-[10%] top-[10%] h-[14%] w-[32%] bg-[#c5d4dc]/35"
+        style={{ animationDelay: "1.8s", animationDuration: "12s" }}
+      />
+
+      <span className="bg-fx-hill absolute bottom-[38%] left-[-10%] h-[18%] w-[50%] bg-[#7a9298]/38 blur-[1.8px]" />
+      <span className="bg-fx-hill absolute bottom-[36%] right-[-8%] h-[20%] w-[48%] bg-[#6e8892]/34 blur-[1.8px]" />
+      <span className="absolute bottom-[34%] left-1/2 h-[8%] w-[32%] -translate-x-1/2 rounded-[100%] bg-[#7a9aaa]/45 blur-[0.6px]" />
+      <span className="absolute bottom-[35%] left-1/2 h-[4%] w-[22%] -translate-x-1/2 rounded-[100%] bg-[#cfe0e8]/40" />
+
+      <MeadowTree
+        className="bg-fx-tree bg-fx-tree-sway absolute bottom-[18%] left-[-4%]"
+        style={{
+          width: isFull ? "40%" : "44%",
+          height: isFull ? "62%" : "58%",
+          animationDelay: "0s",
+          filter: "saturate(0.72) brightness(0.88)",
+        }}
+      />
+      <MeadowTree
+        className="bg-fx-tree bg-fx-tree-sway absolute bottom-[16%] right-[-6%]"
+        style={{
+          width: isFull ? "38%" : "42%",
+          height: isFull ? "66%" : "60%",
+          animationDelay: "1.4s",
+          animationDuration: "9s",
+          filter: "saturate(0.7) brightness(0.84)",
+        }}
+        mirror
+      />
+      {isFull && (
+        <MeadowTree
+          className="bg-fx-tree bg-fx-tree-sway absolute bottom-[24%] left-[38%]"
+          style={{
+            width: "20%",
+            height: "38%",
+            opacity: 0.72,
+            animationDelay: "0.7s",
+            animationDuration: "10s",
+            filter: "blur(0.4px) saturate(0.65) brightness(0.9)",
+          }}
+          compact
+        />
+      )}
+
+      <GardenBush
+        className="absolute bottom-[16%] left-[10%]"
+        style={{ width: isFull ? 48 : 30, height: isFull ? 28 : 18, filter: "saturate(0.7)" }}
+        tone="sage"
+      />
+      <GardenBush
+        className="absolute bottom-[15%] right-[12%]"
+        style={{ width: isFull ? 44 : 28, height: isFull ? 26 : 16, filter: "saturate(0.65)" }}
+        tone="sage"
+      />
+      {(isFull
+        ? [
+            { left: "14%", color: "#c8d4c0" },
+            { left: "20%", color: "#e8dcc8" },
+            { left: "74%", color: "#b8c8d0" },
+            { left: "80%", color: "#d4c4a8" },
+          ]
+        : [
+            { left: "16%", color: "#c8d4c0" },
+            { left: "76%", color: "#b8c8d0" },
+          ]
+      ).map((bloom, i) => (
+        <span
+          key={`rain-bloom-${i}`}
+          className="absolute rounded-full"
+          style={{
+            left: bloom.left,
+            bottom: "17%",
+            width: isFull ? 6 : 4,
+            height: isFull ? 6 : 4,
+            background: `radial-gradient(circle at 35% 35%, #fff, ${bloom.color})`,
+            opacity: 0.8,
+          }}
+        />
+      ))}
+
+      {(isFull ? RAIN_FULL : RAIN_PREVIEW).map((drop, i) => (
+        <span
+          key={`rain-${i}`}
+          className="bg-fx-raindrop"
+          style={
+            {
+              left: drop.left,
+              height: drop.size,
+              width: drop.size > 22 ? 2 : 1.5,
+              "--bg-drift": `${drop.drift ?? -10}px`,
+              "--rain-opacity": drop.size > 22 ? 0.7 : 0.5,
+              animationDuration: `${drop.duration}s`,
+              animationDelay: `${drop.delay}s`,
+              zIndex: 1,
+            } as CSSProperties
+          }
+        />
+      ))}
+
+      {(isFull ? PANE_DROPS_FULL : PANE_DROPS_PREVIEW).map((bead, i) => (
+        <span
+          key={`pane-${i}`}
+          className={`bg-fx-pane-drop ${i % 3 === 0 ? "bg-fx-pane-drip" : ""}`}
+          style={{
+            left: bead.left,
+            top: bead.top,
+            width: bead.size,
+            height: bead.size * 1.25,
+            animationDelay: `${bead.delay}s`,
+            animationDuration: `${bead.duration}s`,
+          }}
+        />
+      ))}
+
+      <span className="bg-fx-glass-sheen z-[2]" />
+
+      <span
+        className="bg-fx-curtain absolute left-[6%] top-[7%] h-[70%] w-[13%] rounded-b-[45%] bg-gradient-to-b from-[#f5f0e8]/92 via-[#ece4d6]/70 to-[#e8dcc8]/35"
+        style={{ animationDuration: "9s" }}
+      />
+      <span
+        className="bg-fx-curtain absolute right-[6%] top-[7%] h-[68%] w-[12%] rounded-b-[45%] bg-gradient-to-b from-[#f5f0e8]/88 via-[#ece4d6]/64 to-[#e8dcc8]/30"
+        style={{ animationDelay: "1.4s", animationDuration: "10s" }}
+      />
+
+      <span className="absolute inset-x-[5%] top-[6%] h-[5%] rounded-sm bg-[#efe6d8]/90" />
+      <span className="absolute inset-y-[8%] left-[5%] w-[5%] rounded-sm bg-[#efe6d8]/80" />
+      <span className="absolute inset-y-[8%] right-[5%] w-[5%] rounded-sm bg-[#efe6d8]/75" />
+      <span className="absolute bottom-[5%] left-[5%] right-[5%] h-[12%] rounded-sm bg-[#e8dcc8]/92 shadow-[0_-4px_10px_rgba(74,82,72,0.08)]" />
+      <span className="bg-fx-window-frame z-[3]" />
+
+      <SillPot
+        className="absolute z-[4]"
+        style={{
+          left: isFull ? "12%" : "11%",
+          bottom: isFull ? "8%" : "7%",
+          width: isFull ? 28 : 18,
+          height: isFull ? 28 : 18,
+        }}
+      />
+      <SillPot
+        className="absolute z-[4]"
+        style={{
+          left: isFull ? "22%" : "21%",
+          bottom: isFull ? "7%" : "6%",
+          width: isFull ? 22 : 14,
+          height: isFull ? 22 : 14,
+        }}
+        tone="sage"
+      />
+      <SillMug
+        className="absolute z-[4]"
+        style={{
+          right: isFull ? "14%" : "13%",
+          bottom: isFull ? "8%" : "7%",
+          width: isFull ? 22 : 14,
+          height: isFull ? 18 : 12,
+        }}
+      />
+      <span className="pointer-events-none absolute bottom-0 left-0 right-0 z-[3] h-[16%] bg-gradient-to-t from-[#f5f0e8]/70 to-transparent" />
+    </>
+  );
+}
+
+/** 첫눈 — 눈 덮인 초원·나무·연못·오두막 */
+function FirstSnowScene({ isFull }: { isFull: boolean }) {
+  return (
+    <>
+      <span
+        className="bg-fx-haze absolute left-[12%] top-[4%] h-[20%] w-[52%] bg-white/70"
+        style={{ animationDuration: "12s" }}
+      />
+      <span
+        className="bg-fx-haze absolute right-[8%] top-[10%] h-[16%] w-[34%] bg-[#dbe6f2]/50"
+        style={{ animationDelay: "1.6s", animationDuration: "14s" }}
+      />
+
+      <span className="bg-fx-hill absolute bottom-[42%] left-[-10%] h-[16%] w-[48%] bg-[#9aafc0]/40 blur-[1.8px]" />
+      <span className="bg-fx-hill absolute bottom-[40%] right-[-8%] h-[18%] w-[46%] bg-[#8aa0b4]/36 blur-[1.8px]" />
+      <span className="bg-fx-hill absolute bottom-[36%] left-[26%] h-[12%] w-[36%] bg-[#c5d4de]/40 blur-[1px]" />
+
+      <span className="absolute bottom-[34%] left-1/2 h-[8%] w-[30%] -translate-x-1/2 rounded-[100%] bg-[#b7cce0]/55" />
+      <span className="absolute bottom-[35%] left-[48%] h-[4%] w-[18%] -translate-x-1/2 rounded-[100%] bg-white/50" />
+
+      <CottageSvg
+        className="absolute"
+        style={{
+          left: isFull ? "54%" : "52%",
+          bottom: isFull ? "40%" : "38%",
+          width: isFull ? 40 : 24,
+          height: isFull ? 30 : 18,
+          opacity: 0.85,
+          filter: "saturate(0.7)",
+        }}
+      />
+      <span
+        className="absolute rounded-[100%] bg-white/90"
+        style={{
+          left: isFull ? "53%" : "51%",
+          bottom: isFull ? "52%" : "48%",
+          width: isFull ? 36 : 22,
+          height: isFull ? 10 : 6,
+        }}
+      />
+
+      <MeadowTree
+        className="bg-fx-tree bg-fx-tree-sway absolute bottom-[16%] left-[-2%]"
+        style={{
+          width: isFull ? "40%" : "44%",
+          height: isFull ? "64%" : "60%",
+          animationDelay: "0s",
+          filter: "saturate(0.55) brightness(0.95)",
+        }}
+        snowy
+      />
+      <MeadowTree
+        className="bg-fx-tree bg-fx-tree-sway absolute bottom-[14%] right-[-4%]"
+        style={{
+          width: isFull ? "38%" : "42%",
+          height: isFull ? "68%" : "62%",
+          animationDelay: "1.2s",
+          animationDuration: "9s",
+          filter: "saturate(0.5) brightness(0.92)",
+        }}
+        mirror
+        snowy
+      />
+      {isFull && (
+        <MeadowTree
+          className="bg-fx-tree bg-fx-tree-sway absolute bottom-[22%] left-[34%]"
+          style={{
+            width: "20%",
+            height: "40%",
+            opacity: 0.78,
+            animationDelay: "0.5s",
+            animationDuration: "10s",
+            filter: "blur(0.35px) saturate(0.5)",
+          }}
+          compact
+          snowy
+        />
+      )}
+
+      <ForestTree
+        className="bg-fx-tree bg-fx-tree-sway absolute bottom-[18%] left-[18%]"
+        style={{
+          width: isFull ? "16%" : "18%",
+          height: isFull ? "32%" : "28%",
+          opacity: 0.8,
+          animationDelay: "0.8s",
+        }}
+      />
+      <span
+        className="absolute rounded-[100%] bg-white/85"
+        style={{
+          left: isFull ? "20%" : "21%",
+          bottom: isFull ? "42%" : "38%",
+          width: isFull ? 22 : 14,
+          height: isFull ? 8 : 5,
+        }}
+      />
+
+      {(isFull ? SNOW_FULL : SNOW_PREVIEW).map((flake, i) => (
+        <span
+          key={`snow-${i}`}
+          className="bg-fx-snowflake"
+          style={
+            {
+              left: flake.left,
+              width: flake.size,
+              height: flake.size,
+              opacity: flake.opacity,
+              filter: flake.blur ? `blur(${flake.blur}px)` : undefined,
+              "--bg-drift": `${flake.drift ?? 16}px`,
+              animationDuration: `${flake.duration}s`,
+              animationDelay: `${flake.delay}s`,
+              zIndex: 2,
+            } as CSSProperties
+          }
+        />
+      ))}
+
+      <span className="pointer-events-none absolute bottom-0 left-0 right-0 h-[34%] bg-gradient-to-t from-white/85 via-white/40 to-transparent" />
+      <span className="absolute bottom-[8%] left-[6%] h-[10%] w-[22%] rounded-[100%] bg-white/80 blur-[0.5px]" />
+      <span className="absolute bottom-[7%] right-[8%] h-[12%] w-[26%] rounded-[100%] bg-white/75 blur-[0.5px]" />
+      <span className="absolute bottom-[10%] left-[10%] h-[5%] w-[10%] rounded-[100%] bg-[#c8c4bc]/70" />
+      <span className="absolute bottom-[9%] left-[16%] h-[4%] w-[8%] rounded-[100%] bg-[#b8b4ac]/65" />
+
+      <SnowmanSvg
+        className="absolute z-[2]"
+        style={{
+          right: isFull ? "18%" : "16%",
+          bottom: isFull ? "12%" : "11%",
+          width: isFull ? 36 : 22,
+          height: isFull ? 48 : 30,
+        }}
+      />
+      {(isFull
+        ? [
+            { left: "12%", color: "#c47858" },
+            { left: "22%", color: "#e8a598" },
+            { left: "78%", color: "#c47858" },
+          ]
+        : [
+            { left: "14%", color: "#c47858" },
+            { left: "80%", color: "#e8a598" },
+          ]
+      ).map((berry, i) => (
+        <span
+          key={`berry-${i}`}
+          className="bg-fx-bloom absolute"
+          style={{
+            left: berry.left,
+            bottom: "13%",
+            width: isFull ? 6 : 4,
+            height: isFull ? 6 : 4,
+            background: `radial-gradient(circle at 35% 35%, #fff, ${berry.color})`,
+          }}
+        />
+      ))}
+
+      <span
+        className="bg-fx-bird"
+        style={{
+          left: "88%",
+          top: isFull ? "16%" : "14%",
+          animationDelay: "2.4s",
+        }}
+      >
+        <BirdSvg />
+      </span>
+      <span className="bg-fx-ground-glow absolute bottom-[6%] left-1/2 h-5 w-36 -translate-x-1/2 rounded-full bg-white/55 blur-md" />
+    </>
+  );
+}
+
 /** 벚꽃 정원 — 나무·수풀·꽃·나비·새 등 장면 디테일 */
 function CherryGardenScene({ isFull }: { isFull: boolean }) {
   return (
@@ -1526,6 +1825,111 @@ function BirdSvg() {
         strokeLinecap="round"
         opacity="0.5"
       />
+    </svg>
+  );
+}
+
+function MeadowTree({
+  className = "",
+  style,
+  mirror = false,
+  compact = false,
+  snowy = false,
+}: {
+  className?: string;
+  style?: CSSProperties;
+  mirror?: boolean;
+  compact?: boolean;
+  snowy?: boolean;
+}) {
+  const canopy = snowy
+    ? ["#9aaf98", "#7e9478", "#b4c4ae"]
+    : ["#7a9168", "#5e7a52", "#9caf88"];
+  return (
+    <svg
+      className={className}
+      style={style}
+      viewBox="0 0 120 160"
+      fill="none"
+      aria-hidden
+    >
+      <g transform={mirror ? "translate(120,0) scale(-1,1)" : undefined}>
+        <path
+          d={
+            compact
+              ? "M58 158 C56 120 54 95 52 78 C60 90 68 110 66 158 Z"
+              : "M56 158 C52 118 48 88 44 62 C58 78 72 108 70 158 Z"
+          }
+          fill="#8b6b4a"
+        />
+        <ellipse cx="38" cy="58" rx="28" ry="24" fill={canopy[0]} opacity="0.92" />
+        <ellipse cx="68" cy="48" rx="30" ry="26" fill={canopy[1]} opacity="0.9" />
+        <ellipse cx="52" cy="36" rx="24" ry="20" fill={canopy[2]} opacity="0.95" />
+        <ellipse cx="78" cy="62" rx="18" ry="16" fill={canopy[0]} opacity="0.85" />
+        <ellipse cx="28" cy="70" rx="16" ry="14" fill={canopy[2]} opacity="0.8" />
+        {!compact && (
+          <ellipse cx="60" cy="28" rx="14" ry="12" fill={canopy[2]} opacity="0.75" />
+        )}
+        {snowy && (
+          <>
+            <ellipse cx="40" cy="42" rx="20" ry="9" fill="#fff" opacity="0.88" />
+            <ellipse cx="66" cy="34" rx="22" ry="10" fill="#fff" opacity="0.9" />
+            <ellipse cx="54" cy="24" rx="16" ry="7" fill="#fff" opacity="0.92" />
+            {!compact && (
+              <ellipse cx="76" cy="52" rx="12" ry="6" fill="#fff" opacity="0.8" />
+            )}
+          </>
+        )}
+      </g>
+    </svg>
+  );
+}
+
+function SillMug({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 28 22" fill="none" aria-hidden>
+      <path d="M5 8 H20 L18 20 H7 Z" fill="#e8a598" />
+      <path d="M6 9 H19 L17.6 19 H7.4 Z" fill="#f2c4b8" opacity="0.45" />
+      <path
+        d="M20 10 H24 C25.6 10 26.5 12 25.2 14 C24 16 22 16 20 15.5"
+        stroke="#d49088"
+        strokeWidth="1.8"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="12.5" cy="8" rx="7" ry="2.2" fill="#f5f0e8" />
+      <ellipse cx="12.5" cy="7.4" rx="4" ry="1.2" fill="#d8c8b0" opacity="0.7" />
+    </svg>
+  );
+}
+
+function SnowmanSvg({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 40 56" fill="none" aria-hidden>
+      <ellipse cx="20" cy="44" rx="14" ry="11" fill="#f7fafc" />
+      <ellipse cx="20" cy="28" rx="10" ry="9" fill="#ffffff" />
+      <ellipse cx="20" cy="14" rx="7" ry="7" fill="#f7fafc" />
+      <circle cx="18" cy="13" r="1.1" fill="#4a5248" />
+      <circle cx="23" cy="13" r="1.1" fill="#4a5248" />
+      <path d="M20 15 L26 17 L20 18 Z" fill="#e8a598" />
+      <circle cx="20" cy="26" r="1.1" fill="#6d655c" />
+      <circle cx="20" cy="30" r="1.1" fill="#6d655c" />
+      <path d="M10 28 L2 24" stroke="#8b6b4a" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M30 28 L38 23" stroke="#8b6b4a" strokeWidth="1.6" strokeLinecap="round" />
+      <rect x="14" y="6" width="12" height="4" rx="1" fill="#6d655c" />
+      <rect x="16" y="3" width="8" height="4" rx="1" fill="#4a5248" />
     </svg>
   );
 }

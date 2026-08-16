@@ -225,15 +225,18 @@ a {
 
 .bg-scene-rainy-window {
   background:
-    linear-gradient(180deg, rgba(253, 251, 247, 0.18) 0%, transparent 42%),
-    radial-gradient(ellipse 90% 55% at 50% 110%, rgba(255, 255, 255, 0.35), transparent 60%),
+    radial-gradient(ellipse 75% 32% at 50% 4%, rgba(255, 255, 255, 0.38), transparent 58%),
+    radial-gradient(ellipse 48% 26% at 16% 46%, rgba(90, 118, 108, 0.28), transparent 70%),
+    radial-gradient(ellipse 46% 24% at 86% 48%, rgba(86, 112, 104, 0.24), transparent 70%),
+    radial-gradient(ellipse 85% 38% at 50% 100%, rgba(92, 112, 86, 0.42), transparent 52%),
     linear-gradient(
-      165deg,
-      #6f8798 0%,
-      #8ba4b4 22%,
-      #a3bcc9 48%,
-      #c5d4dc 72%,
-      #e4ecef 100%
+      180deg,
+      #6a7e90 0%,
+      #7d93a4 16%,
+      #91a8b6 32%,
+      #b4c4b6 54%,
+      #8ea27c 74%,
+      #6d8260 100%
     );
 }
 
@@ -255,15 +258,18 @@ a {
 
 .bg-scene-first-snow {
   background:
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255, 255, 255, 0.7), transparent 55%),
-    radial-gradient(ellipse 60% 30% at 70% 45%, rgba(180, 200, 220, 0.35), transparent 70%),
+    radial-gradient(ellipse 80% 38% at 50% 0%, rgba(255, 255, 255, 0.88), transparent 56%),
+    radial-gradient(ellipse 42% 26% at 78% 18%, rgba(214, 226, 242, 0.55), transparent 70%),
+    radial-gradient(ellipse 50% 28% at 18% 42%, rgba(176, 198, 186, 0.28), transparent 72%),
+    radial-gradient(ellipse 90% 42% at 50% 100%, rgba(255, 255, 255, 0.78), transparent 50%),
     linear-gradient(
       180deg,
-      #d5e0eb 0%,
-      #e2eaf2 30%,
-      #d8e4ee 55%,
-      #eef4f8 78%,
-      #f7fafc 100%
+      #c5d4e4 0%,
+      #d5e2ee 20%,
+      #c8d6e4 40%,
+      #dde6ee 58%,
+      #eef3f8 78%,
+      #ffffff 100%
     );
 }
 
@@ -805,6 +811,37 @@ a {
   pointer-events: none;
 }
 
+.bg-fx-pane-drop {
+  position: absolute;
+  border-radius: 60% 60% 70% 70% / 55% 55% 80% 80%;
+  background: radial-gradient(
+    circle at 32% 28%,
+    rgba(255, 255, 255, 0.92),
+    rgba(163, 188, 201, 0.42)
+  );
+  box-shadow: inset 0 -1px 1px rgba(70, 90, 105, 0.22);
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes bg-pane-drip {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.75;
+  }
+  70% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate3d(0, 22px, 0);
+    opacity: 0;
+  }
+}
+
+.bg-fx-pane-drip {
+  animation: bg-pane-drip 4.8s ease-in infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bg-fx-star,
   .bg-fx-shooting-star,
@@ -826,7 +863,8 @@ a {
   .bg-fx-firefly,
   .bg-fx-dust,
   .bg-fx-candle,
-  .bg-fx-curtain {
+  .bg-fx-curtain,
+  .bg-fx-pane-drip {
     animation: none !important;
   }
 
