@@ -143,6 +143,12 @@ const QUICK_EMOJIS: { emoji: string; tone: "positive" | "negative" }[] = [
 type MenuItemId = "journey" | "calendar" | "settings";
 type DockTab = "chat" | "store" | "item";
 
+const MENU_ITEMS: { id: MenuItemId; label: string; href: string }[] = [
+  { id: "journey", label: "여정", href: "/journey" },
+  { id: "calendar", label: "마음 달력", href: "/calendar" },
+  { id: "settings", label: "설정", href: "/settings" },
+];
+
 const DOCK_TABS: { id: DockTab; label: string }[] = [
   { id: "chat", label: "채팅" },
   { id: "store", label: "상점" },
@@ -285,6 +291,7 @@ export default function Home() {
   const plantMoodTimerRef = useRef<number | null>(null);
   const [hpGlow, setHpGlow] = useState<"none" | "up" | "down">("none");
   const [watering, setWatering] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [dockTab, setDockTab] = useState<DockTab>("chat");
   const [backgroundId, setBackgroundId] = useState<BackgroundId>("room");
   const [potSkinId, setPotSkinId] = useState<PotSkinId>("default");
@@ -1141,25 +1148,22 @@ export default function Home() {
           <div className="absolute bottom-0 right-0 h-40 w-40 rounded-full bg-[#e8dcc8]/50 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto flex h-full min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
+        <div className="relative mx-auto flex h-full min-h-0 w-full max-w-md flex-1 flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:max-w-lg sm:px-6 sm:py-8">
           {/* ── 상단: 레벨 & HP ── */}
-          <header className="shrink-0 space-y-1">
-            <div className="flex items-center justify-between gap-2">
+          <header className="relative z-30 shrink-0 space-y-1">
+            <div className="relative flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <Link
-                  href="/journey"
-                  aria-label="여정"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm transition hover:bg-white"
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((open) => !open)}
+                  aria-label="메뉴 열기"
+                  aria-expanded={menuOpen}
+                  className="flex h-10 w-10 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm transition hover:bg-white"
                 >
-                  <MenuIcon id="journey" />
-                </Link>
-                <Link
-                  href="/calendar"
-                  aria-label="감정 달력"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm transition hover:bg-white"
-                >
-                  <MenuIcon id="calendar" />
-                </Link>
+                  <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
+                  <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
+                  <span className="block h-0.5 w-5 rounded-full bg-[#4a5248]" />
+                </button>
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold tracking-[0.2em] text-[#8ba4b4]">
                     HEALING GARDEN
@@ -1169,16 +1173,34 @@ export default function Home() {
                   </h1>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Link
-                  href="/settings"
-                  aria-label="설정"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e8dcc8] bg-white/90 shadow-sm transition hover:bg-white"
-                >
-                  <MenuIcon id="settings" />
-                </Link>
-                <PotionBadge />
-              </div>
+              <PotionBadge />
+
+              {menuOpen && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="메뉴 닫기"
+                    className="fixed inset-0 z-40 bg-[#4a5248]/20"
+                    onClick={() => setMenuOpen(false)}
+                  />
+                  <nav className="absolute left-0 top-[calc(100%+0.4rem)] z-50 w-52 overflow-hidden rounded-2xl border border-[#e8e0d4] bg-white/95 shadow-lg backdrop-blur-md">
+                    <ul className="p-2">
+                      {MENU_ITEMS.map((item) => (
+                        <li key={item.id}>
+                          <Link
+                            href={item.href}
+                            onClick={() => setMenuOpen(false)}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#4a5248] transition hover:bg-[#f5f0e8]"
+                          >
+                            <MenuIcon id={item.id} />
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                </>
+              )}
             </div>
 
             <div className="flex items-stretch gap-1">
